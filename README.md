@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🛍️ EliteMarts - Robotic Neck & Shoulder Massager E-Commerce
 
 A modern, mobile-first single-page e-commerce application for selling premium robotic neck and shoulder massagers with integrated UPI payment system.
@@ -241,3 +242,6 @@ For queries, DM us on Instagram: [@elitemarts_](https://www.instagram.com/elitem
 ---
 
 **Made with ❤️ in India** 🇮🇳
+=======
+# Elitemarts_e_commerce
+>>>>>>> c39cfd95cee5b83554110c0da10cb6109b9dc2da

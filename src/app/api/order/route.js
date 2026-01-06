@@ -8,9 +8,13 @@ export async function POST(request) {
         const data = await request.json();
         const { customer, pricing, couponApplied } = data;
 
-        // Auto-generate order ID if not provided (though frontend generated a mock one, better to regenerate or validate)
-        // We'll use the one from frontend if available + suffix, or just generate new one to be safe.
-        // Spec says: Generate unique order ID in backend.
+        // Validate required fields
+        if (!customer || !customer.name || !customer.phone || !customer.address) {
+            return NextResponse.json(
+                { error: 'Missing required customer information' },
+                { status: 400 }
+            );
+        }
 
         // Create random ID
         const orderId = `ELITE-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
@@ -33,30 +37,60 @@ export async function POST(request) {
                 prepaidAmount: 600,
                 balanceDue: pricing.balanceDue
             },
-            status: "pending", // "pending" manual verification
+            status: "pending",
             createdAt: new Date(),
             updatedAt: new Date()
         };
 
-        // Save to DB
-        const client = await clientPromise;
+        // Save to DB with better error handling
+        let client;
+        try {
+            client = await clientPromise;
+            console.log('MongoDB connected successfully');
+        } catch (dbError) {
+            console.error('MongoDB connection failed:', dbError);
+            return NextResponse.json(
+                { error: 'Database connection failed. Please try again.' },
+                { status: 503 }
+            );
+        }
+
         const db = client.db('elitemarts');
-        await db.collection('orders').insertOne(orderDoc);
 
-        // Generate Invoice
-        const invoiceUrl = await generateInvoice(orderDoc);
+        try {
+            await db.collection('orders').insertOne(orderDoc);
+            console.log('Order saved:', orderId);
+        } catch (insertError) {
+            console.error('Order insert failed:', insertError);
+            return NextResponse.json(
+                { error: 'Failed to save order. Please try again.' },
+                { status: 500 }
+            );
+        }
 
-        // Update doc with invoice URL (optional)
-        await db.collection('orders').updateOne(
-            { orderId },
-            { $set: { invoiceUrl } }
-        );
+        // Generate Invoice (non-blocking)
+        let invoiceUrl = null;
+        try {
+            invoiceUrl = await generateInvoice(orderDoc);
+            await db.collection('orders').updateOne(
+                { orderId },
+                { $set: { invoiceUrl } }
+            );
+        } catch (invoiceError) {
+            console.error('Invoice generation failed:', invoiceError);
+            // Don't fail the order if invoice fails
+        }
 
-        // Send SMS
-        await sendSMS({
-            to: customer.phone,
-            message: `Your order ${orderId} is placed! Please wait for payment verification.`
-        });
+        // Send SMS (non-blocking)
+        try {
+            await sendSMS({
+                to: customer.phone,
+                message: `Your order ${orderId} is placed! Please wait for payment verification.`
+            });
+        } catch (smsError) {
+            console.error('SMS failed:', smsError);
+            // Don't fail the order if SMS fails
+        }
 
         return NextResponse.json({
             success: true,
@@ -67,8 +101,14 @@ export async function POST(request) {
 
     } catch (error) {
         console.error('Order Error:', error);
+        console.error('Error details:', error.message);
+        console.error('Error stack:', error.stack);
+
         return NextResponse.json(
-            { error: 'Order creation failed' },
+            {
+                error: 'Order creation failed. Please try again.',
+                details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            },
             { status: 500 }
         );
     }
