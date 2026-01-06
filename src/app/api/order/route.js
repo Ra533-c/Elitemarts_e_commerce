@@ -5,6 +5,7 @@ import { sendSMS } from '@/lib/notifications';
 
 export async function POST(request) {
     try {
+        console.log('API Request Started - Version: NO_PDF_WRITE_FIX_v1');
         const data = await request.json();
         const { customer, pricing, couponApplied } = data;
 

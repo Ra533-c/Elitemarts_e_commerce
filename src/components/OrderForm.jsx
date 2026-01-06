@@ -66,6 +66,9 @@ export default function OrderForm() {
     };
 
     const onDetailsSubmit = async (data) => {
+        console.log('Form data:', data);
+        console.log('Pricing:', pricing);
+
         try {
             const response = await fetch('/api/order', {
                 method: 'POST',
@@ -77,8 +80,11 @@ export default function OrderForm() {
                 })
             });
 
+            console.log('Response status:', response.status);
+            const result = await response.json();
+            console.log('Response data:', result);
+
             if (response.ok) {
-                const result = await response.json();
                 setOrderData({ ...data, orderId: result.orderId });
 
                 // Success celebration
@@ -97,10 +103,12 @@ export default function OrderForm() {
 
                 toast.success('Order created successfully!');
             } else {
-                toast.error('Failed to create order. Please try again.');
+                console.error('Order creation failed:', result);
+                toast.error(result.error || 'Failed to create order. Please try again.');
             }
         } catch (error) {
-            toast.error('Something went wrong');
+            console.error('Submit error:', error);
+            toast.error('Network error. Please check your connection.');
         }
     };
 
@@ -147,8 +155,8 @@ export default function OrderForm() {
                 {['Details', 'Payment'].map((label, idx) => (
                     <div key={label} className="flex flex-col items-center bg-white px-2">
                         <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold transition-all text-sm sm:text-base ${step > idx + 1 ? 'bg-green-500 text-white shadow-lg' :
-                                step === idx + 1 ? 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white ring-4 ring-indigo-100 shadow-lg' :
-                                    'bg-gray-200 text-gray-500'
+                            step === idx + 1 ? 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white ring-4 ring-indigo-100 shadow-lg' :
+                                'bg-gray-200 text-gray-500'
                             }`}>
                             {step > idx + 1 ? <span className="text-xl sm:text-2xl">✓</span> : idx + 1}
                         </div>
@@ -209,6 +217,7 @@ export default function OrderForm() {
                                 <label className="block text-sm font-bold text-gray-700 mb-2">PIN Code</label>
                                 <div className="relative">
                                     <input
+                                        {...register('pincode')}
                                         onChange={handlePincodeChange}
                                         placeholder="400001"
                                         maxLength={6}
