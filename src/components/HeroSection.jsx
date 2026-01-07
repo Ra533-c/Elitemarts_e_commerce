@@ -58,7 +58,7 @@ export default function HeroSection() {
                         className="w-full h-auto max-h-[300px] sm:max-h-[500px] object-cover"
                         controls
                         preload="metadata"
-                        poster="/product-thumbnail.jpg"
+                        poster="/product-desc.jpg"
                     >
                         <source src="/product-demo.mp4" type="video/mp4" />
                         Your browser does not support the video tag.
