@@ -43,7 +43,6 @@ export default function HeroSection() {
 
     const handleVideoSelect = (videoIndex) => {
         setCurrentVideo(videoIndex);
-        setIsPlaying(false);
     };
 
     return (
@@ -102,6 +101,7 @@ export default function HeroSection() {
                             muted
                             loop
                             playsInline
+                            controls
                             preload="metadata"
                             poster={videos[currentVideo].poster}
                         >
@@ -118,7 +118,11 @@ export default function HeroSection() {
                         className="flex justify-center items-center gap-4 mt-4"
                     >
                         <button
-                            onClick={() => handleVideoSelect((currentVideo - 1 + videos.length) % videos.length)}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleVideoSelect((currentVideo - 1 + videos.length) % videos.length);
+                            }}
                             className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors border border-white/30 text-sm"
                         >
                             ← Previous
@@ -129,7 +133,11 @@ export default function HeroSection() {
                         </span>
 
                         <button
-                            onClick={() => handleVideoSelect((currentVideo + 1) % videos.length)}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleVideoSelect((currentVideo + 1) % videos.length);
+                            }}
                             className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors border border-white/30 text-sm"
                         >
                             Next →
