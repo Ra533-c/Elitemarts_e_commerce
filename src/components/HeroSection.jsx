@@ -39,7 +39,7 @@ export default function HeroSection() {
             title: 'Results',
             description: 'Before & After Comparison',
             thumbnail: '/product3.jpg'
-        }
+        },
     ];
 
     const handleVideoSelect = (videoIndex) => {
@@ -104,10 +104,10 @@ export default function HeroSection() {
                         key={currentVideo}
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl mb-6 border-4 border-white/30 bg-white"
+                        className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl mb-6 border-4 border-white/30 bg-white max-w-md mx-auto"
                     >
                         <video
-                            className="w-full h-auto max-h-[300px] sm:max-h-[400px] object-cover"
+                            className="w-full h-auto object-contain"
                             controls
                             preload="metadata"
                             poster={videos[currentVideo].poster}
@@ -129,56 +129,30 @@ export default function HeroSection() {
                         </div>
                     </motion.div>
 
-                    {/* Video Thumbnails/Previews */}
+                    {/* Video Navigation - Simple Previous/Next */}
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.6 }}
-                        className="flex justify-center gap-3 sm:gap-4"
+                        className="flex justify-center items-center gap-4 mb-4"
                     >
-                        {videos.map((video, index) => (
-                            <motion.button
-                                key={video.id}
-                                onClick={() => handleVideoSelect(index)}
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                className={`relative rounded-lg overflow-hidden border-2 transition-all duration-300 ${
-                                    currentVideo === index
-                                        ? 'border-yellow-400 shadow-lg ring-2 ring-yellow-300'
-                                        : 'border-white/50 hover:border-white/80'
-                                }`}
-                            >
-                                <img
-                                    src={video.thumbnail}
-                                    alt={video.title}
-                                    className="w-16 h-16 sm:w-20 sm:h-20 object-cover"
-                                />
-                                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                                    {currentVideo === index && isPlaying ? (
-                                        <Pause className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-                                    ) : (
-                                        <Play className="w-6 h-6 sm:w-8 sm:h-8 text-white ml-1" />
-                                    )}
-                                </div>
-                                {currentVideo === index && (
-                                    <div className="absolute bottom-0 left-0 right-0 bg-yellow-500 text-black text-xs py-1 text-center font-bold">
-                                        PLAYING
-                                    </div>
-                                )}
-                            </motion.button>
-                        ))}
-                    </motion.div>
+                        <button
+                            onClick={() => handleVideoSelect((currentVideo - 1 + videos.length) % videos.length)}
+                            className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors border border-white/30"
+                        >
+                            ← Previous
+                        </button>
 
-                    {/* Video Navigation Hint */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.8 }}
-                        className="text-center mt-4"
-                    >
-                        <p className="text-xs text-white/70 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-2 inline-block border border-white/20">
-                            🎬 Click thumbnails to switch between videos
-                        </p>
+                        <span className="text-white/80 text-sm">
+                            {currentVideo + 1} of {videos.length}
+                        </span>
+
+                        <button
+                            onClick={() => handleVideoSelect((currentVideo + 1) % videos.length)}
+                            className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors border border-white/30"
+                        >
+                            Next →
+                        </button>
                     </motion.div>
                 </motion.div>
 

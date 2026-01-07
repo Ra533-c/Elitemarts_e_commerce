@@ -1,5 +1,5 @@
 // Client-side PDF generation utility
-// This runs in the browser, not on the server
+// Amazon-style professional invoice
 
 export async function generateClientInvoice(orderData) {
     // Dynamically import jsPDF only on client side
@@ -7,150 +7,170 @@ export async function generateClientInvoice(orderData) {
 
     const doc = new jsPDF();
 
-    // Colors
-    const primaryColor = [46, 125, 50]; // Green
-    const secondaryColor = [33, 33, 33]; // Dark gray
-    const accentColor = [255, 87, 34]; // Orange
+    // Colors - Amazon style
+    const primaryColor = [0, 123, 255]; // Blue
+    const secondaryColor = [33, 37, 41]; // Dark gray
+    const lightGray = [248, 249, 250]; // Light gray
+    const borderColor = [222, 226, 230]; // Border gray
 
-    // Header - Elitemarts Branding
+    // Header - Amazon style
     doc.setFillColor(...primaryColor);
-    doc.rect(0, 0, 210, 40, 'F');
+    doc.rect(0, 0, 210, 35, 'F');
 
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(24);
+    doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
-    doc.text('ELITEMARTS', 105, 20, { align: 'center' });
-
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Premium Robotic Massagers & Health Products', 105, 30, { align: 'center' });
-
-    // Invoice Title
-    doc.setTextColor(...secondaryColor);
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.text('INVOICE', 105, 55, { align: 'center' });
-
-    // Invoice Details
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Invoice No: ${orderData.orderId}`, 20, 70);
-    doc.text(`Date: ${new Date().toLocaleDateString('en-IN')}`, 20, 80);
-    doc.text(`Time: ${new Date().toLocaleTimeString('en-IN')}`, 20, 90);
-
-    // Customer Details Section
-    doc.setFillColor(240, 240, 240);
-    doc.rect(20, 100, 170, 25, 'F');
-
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...primaryColor);
-    doc.text('CUSTOMER DETAILS', 25, 110);
+    doc.text('EliteMarts', 20, 20);
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...secondaryColor);
-    doc.text(`Name: ${orderData.name || 'Customer'}`, 25, 118);
-    doc.text(`Phone: ${orderData.phone || ''}`, 25, 125);
+    doc.text('Premium Health & Wellness Products', 20, 28);
+    doc.text('Order Invoice', 170, 28, { align: 'right' });
 
-    // Product Details Table
+    // Invoice Details Box
+    doc.setFillColor(...lightGray);
+    doc.rect(140, 45, 50, 25, 'F');
+    doc.setTextColor(...secondaryColor);
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...primaryColor);
-    doc.text('PRODUCT DETAILS', 20, 140);
+    doc.text('INVOICE DETAILS', 145, 52);
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Invoice No: ${orderData.orderId}`, 145, 58);
+    doc.text(`Date: ${new Date().toLocaleDateString('en-IN')}`, 145, 63);
+    doc.text(`Time: ${new Date().toLocaleTimeString('en-IN')}`, 145, 68);
+
+    // Bill To / Ship To
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('BILL TO / SHIP TO', 20, 50);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${orderData.name || 'Customer'}`, 20, 58);
+    doc.text(`${orderData.phone || ''}`, 20, 65);
+    doc.text(`${orderData.address || ''}`, 20, 72);
+    doc.text(`${orderData.city || ''}, ${orderData.state || ''} ${orderData.pincode || ''}`, 20, 79);
+
+    // Order Summary Table
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Order Summary', 20, 95);
 
     // Table Header
     doc.setFillColor(...primaryColor);
-    doc.rect(20, 145, 170, 8, 'F');
+    doc.rect(20, 100, 170, 10, 'F');
     doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Item Description', 25, 106);
+    doc.text('Qty', 130, 106);
+    doc.text('Unit Price', 150, 106);
+    doc.text('Total', 175, 106, { align: 'right' });
+
+    // Table Row 1 - Product
+    doc.setFillColor(255, 255, 255);
+    doc.rect(20, 110, 170, 12, 'F');
+    doc.setTextColor(...secondaryColor);
+    doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.text('Product', 25, 150);
-    doc.text('Qty', 120, 150);
-    doc.text('Price', 150, 150);
+    doc.text('Robotic Neck & Shoulder Massager', 25, 117);
+    doc.text('1', 135, 117, { align: 'center' });
+    doc.text('₹1,199.00', 155, 117, { align: 'center' });
+    doc.text('₹1,199.00', 185, 117, { align: 'right' });
 
-    // Table Content
-    doc.setFillColor(250, 250, 250);
-    doc.rect(20, 153, 170, 12, 'F');
+    // Subtotal
+    doc.setFillColor(...lightGray);
+    doc.rect(20, 122, 170, 8, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.text('Subtotal:', 140, 127);
+    doc.text('₹1,199.00', 185, 127, { align: 'right' });
+
+    // Coupon Discount (if applied)
+    if (orderData.pricing?.couponApplied) {
+        doc.setFillColor(255, 255, 255);
+        doc.rect(20, 130, 170, 8, 'F');
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0, 128, 0); // Green
+        doc.text('Coupon Discount (ELITEMARTS27):', 140, 135);
+        doc.text('-₹400.00', 185, 135, { align: 'right' });
+    }
+
+    // Final Total
+    doc.setFillColor(...primaryColor);
+    doc.rect(20, 138, 170, 10, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('TOTAL AMOUNT:', 140, 145);
+    doc.text(`₹${orderData.pricing?.finalPrice || 1199}.00`, 185, 145, { align: 'right' });
+
+    // Payment Information
     doc.setTextColor(...secondaryColor);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Robotic Neck & Shoulder Massager', 25, 160);
-    doc.text('1', 125, 160);
-    doc.text('₹1,199', 150, 160);
-
-    // Pricing Details
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...primaryColor);
-    doc.text('PAYMENT DETAILS', 20, 175);
+    doc.text('PAYMENT INFORMATION', 20, 165);
 
+    // Payment Status Table
+    doc.setFillColor(...lightGray);
+    doc.rect(20, 170, 170, 20, 'F');
+
+    // Prepaid Row
+    doc.setFillColor(40, 167, 69); // Green
+    doc.rect(20, 170, 170, 10, 'F');
+    doc.setTextColor(255, 255, 255);
     doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...secondaryColor);
-
-    // Prepaid Status
-    doc.setFillColor(76, 175, 80);
-    doc.rect(20, 180, 170, 8, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.text('✓ Prepaid Amount (₹600) - PAID', 25, 185);
-
-    // Pending Status
-    doc.setFillColor(...accentColor);
-    doc.rect(20, 188, 170, 8, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.text('⏳ Balance Amount (₹599) - Pending on Delivery', 25, 193);
-
-    // Delivery Address
-    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...primaryColor);
-    doc.text('DELIVERY ADDRESS', 20, 210);
+    doc.text('✓ ADVANCE PAYMENT (₹600)', 25, 177);
+    doc.text('COMPLETED', 165, 177, { align: 'right' });
 
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...secondaryColor);
-    const address = `${orderData.address || ''}, ${orderData.city || ''}, ${orderData.state || ''} - ${orderData.pincode || ''}`;
-    doc.text(address, 20, 218);
+    // Balance Row
+    doc.setFillColor(255, 193, 7); // Yellow
+    doc.rect(20, 180, 170, 10, 'F');
+    doc.setTextColor(0, 0, 0);
+    doc.text('⏳ BALANCE PAYMENT (₹599)', 25, 187);
+    doc.text('PENDING', 165, 187, { align: 'right' });
 
     // Delivery Information
-    doc.setFillColor(255, 248, 225);
-    doc.rect(20, 225, 170, 20, 'F');
-    doc.setTextColor(...accentColor);
-    doc.setFontSize(11);
+    doc.setTextColor(...secondaryColor);
+    doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text('🚚 DELIVERY INFORMATION', 25, 232);
+    doc.text('DELIVERY INFORMATION', 20, 205);
 
+    doc.setFillColor(...lightGray);
+    doc.rect(20, 210, 170, 25, 'F');
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...secondaryColor);
-    doc.text('• Delivery Time: 5-6 business days to your address', 25, 238);
-    doc.text('• Our Shop: EliteMarts - Premium Health Products', 25, 244);
-
-    // Contact Information
-    doc.setFillColor(230, 255, 230);
-    doc.rect(20, 250, 170, 15, 'F');
-    doc.setTextColor(...primaryColor);
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text('📞 CONTACT US', 25, 257);
-
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(...secondaryColor);
-    doc.text('For any queries, contact us on Instagram: @elitemarts_official', 25, 263);
+    doc.text('• Delivery Address: As mentioned above', 25, 217);
+    doc.text('• Estimated Delivery: 5-6 business days', 25, 223);
+    doc.text('• Delivery Partner: EliteMarts Logistics', 25, 229);
+    doc.text('• Tracking: Available after payment verification', 25, 235);
 
     // Terms & Conditions
     doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
-    doc.text('Terms: Product will be delivered after full payment verification. Warranty: 6 months on manufacturing defects.', 20, 275);
-    doc.text('Thank you for choosing EliteMarts! Stay healthy, stay happy.', 20, 280);
+    doc.text('Terms & Conditions:', 20, 245);
+    doc.text('• Product will be delivered after full payment verification.', 20, 250);
+    doc.text('• 6 months warranty on manufacturing defects only.', 20, 255);
+    doc.text('• Returns accepted within 7 days of delivery (unused products only).', 20, 260);
+
+    // Contact Information
+    doc.setFillColor(...primaryColor);
+    doc.rect(0, 270, 210, 20, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Need Help? Contact us:', 20, 277);
+    doc.text('📧 support@elitemarts.com | 📱 +91-XXXXXXXXXX | 📍 Instagram: @elitemarts_official', 20, 283);
 
     // Footer
-    doc.setFillColor(...primaryColor);
-    doc.rect(0, 285, 210, 12, 'F');
+    doc.setFillColor(50, 50, 50);
+    doc.rect(0, 290, 210, 8, 'F');
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.text('EliteMarts - Your Health, Our Priority | www.elitemarts.com', 105, 292, { align: 'center' });
+    doc.setFontSize(7);
+    doc.text('Thank you for shopping with EliteMarts! Your health is our priority.', 105, 295, { align: 'center' });
 
     // Save the PDF directly to user's device
     doc.save(`${orderData.orderId}.pdf`);
