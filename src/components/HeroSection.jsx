@@ -2,11 +2,10 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, ArrowDown, Play, Pause } from 'lucide-react';
+import { Sparkles, ArrowDown } from 'lucide-react';
 
 export default function HeroSection() {
     const [currentVideo, setCurrentVideo] = useState(0);
-    const [isPlaying, setIsPlaying] = useState(false);
 
     const scrollToOrder = () => {
         const orderForm = document.getElementById('order-form');
@@ -83,50 +82,32 @@ export default function HeroSection() {
                     Professional-grade relief at home. Experience instant relaxation in just 15 minutes.
                 </p>
 
-                {/* Interactive Video Player */}
+                {/* Simple Video Player */}
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: 0.4 }}
-                    className="mb-8 sm:mb-12 max-w-4xl mx-auto"
+                    className="mb-8 sm:mb-12 max-w-md mx-auto"
                 >
-                    <div className="text-center mb-6">
-                        <h3 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-                            See EliteMarts in Action
-                        </h3>
-                        <p className="text-white/80 text-sm sm:text-base">
-                            Watch our product demos and customer testimonials
-                        </p>
-                    </div>
-
-                    {/* Main Video Player */}
+                    {/* Main Video Player - Clean and Simple */}
                     <motion.div
                         key={currentVideo}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="relative rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl mb-6 border-4 border-white/30 bg-white max-w-md mx-auto"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="w-full"
                     >
                         <video
                             className="w-full h-auto object-contain"
-                            controls
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
                             preload="metadata"
                             poster={videos[currentVideo].poster}
-                            onPlay={() => setIsPlaying(true)}
-                            onPause={() => setIsPlaying(false)}
                         >
                             <source src={videos[currentVideo].src} type="video/mp4" />
                             Your browser does not support the video tag.
                         </video>
-
-                        {/* Video Info Overlay */}
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 sm:p-6">
-                            <h4 className="text-white text-xl sm:text-2xl font-bold mb-1">
-                                {videos[currentVideo].title}
-                            </h4>
-                            <p className="text-white/90 text-sm sm:text-base">
-                                {videos[currentVideo].description}
-                            </p>
-                        </div>
                     </motion.div>
 
                     {/* Video Navigation - Simple Previous/Next */}
@@ -134,11 +115,11 @@ export default function HeroSection() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.6 }}
-                        className="flex justify-center items-center gap-4 mb-4"
+                        className="flex justify-center items-center gap-4 mt-4"
                     >
                         <button
                             onClick={() => handleVideoSelect((currentVideo - 1 + videos.length) % videos.length)}
-                            className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors border border-white/30"
+                            className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors border border-white/30 text-sm"
                         >
                             ← Previous
                         </button>
@@ -149,7 +130,7 @@ export default function HeroSection() {
 
                         <button
                             onClick={() => handleVideoSelect((currentVideo + 1) % videos.length)}
-                            className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors border border-white/30"
+                            className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors border border-white/30 text-sm"
                         >
                             Next →
                         </button>
