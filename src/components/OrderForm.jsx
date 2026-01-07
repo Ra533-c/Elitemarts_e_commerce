@@ -283,6 +283,8 @@ export default function OrderForm() {
                         <PaymentGateway
                             orderId={orderData?.orderId || "TEST"}
                             amount={600}
+                            orderData={orderData}
+                            pricing={pricing}
                         />
                     </motion.div>
                 )}

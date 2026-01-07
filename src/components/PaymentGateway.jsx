@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Copy, Check, Smartphone, Info, AlertCircle, Monitor } from 'lucide-react';
+import { Copy, Check, Smartphone, Info, AlertCircle, Monitor, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import { generateClientInvoice } from '@/lib/clientInvoice';
 
-export default function PaymentGateway({ orderId, amount = 600 }) {
+export default function PaymentGateway({ orderId, amount = 600, orderData, pricing }) {
     const [copied, setCopied] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
 
@@ -41,6 +42,26 @@ export default function PaymentGateway({ orderId, amount = 600 }) {
                 icon: '📱',
                 duration: 4000,
             });
+        }
+    };
+
+    const handleDownloadInvoice = async () => {
+        try {
+            if (!orderData) {
+                toast.error('Order data not available');
+                return;
+            }
+
+            const invoiceData = {
+                ...orderData,
+                pricing: pricing || { finalPrice: 1199, prepaidAmount: 600, balanceDue: 599 }
+            };
+
+            await generateClientInvoice(invoiceData);
+            toast.success('Invoice downloaded successfully!');
+        } catch (error) {
+            console.error('Invoice download failed:', error);
+            toast.error('Failed to download invoice');
         }
     };
 
@@ -153,6 +174,20 @@ export default function PaymentGateway({ orderId, amount = 600 }) {
                         </p>
                     )}
                 </div>
+            </div>
+
+            {/* Download Invoice Button */}
+            <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8">
+                <button
+                    onClick={handleDownloadInvoice}
+                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 sm:py-4 rounded-2xl flex items-center justify-center gap-3 hover:from-green-700 hover:to-emerald-700 transition-all font-bold text-base sm:text-lg shadow-xl hover:shadow-2xl"
+                >
+                    <Download size={24} />
+                    Download Invoice (PDF)
+                </button>
+                <p className="text-xs text-green-700 mt-2 text-center">
+                    📄 PDF will be saved directly to your device
+                </p>
             </div>
 
             {/* After Payment Instructions */}

@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/database';
-import { generateInvoice } from '@/lib/invoice';
 import { sendSMS } from '@/lib/notifications';
 
 export async function POST(request) {
@@ -69,19 +68,6 @@ export async function POST(request) {
             );
         }
 
-        // Generate Invoice (non-blocking)
-        let invoiceUrl = null;
-        try {
-            invoiceUrl = await generateInvoice(orderDoc);
-            await db.collection('orders').updateOne(
-                { orderId },
-                { $set: { invoiceUrl } }
-            );
-        } catch (invoiceError) {
-            console.error('Invoice generation failed:', invoiceError);
-            // Don't fail the order if invoice fails
-        }
-
         // Send SMS (non-blocking)
         try {
             await sendSMS({
@@ -96,7 +82,6 @@ export async function POST(request) {
         return NextResponse.json({
             success: true,
             orderId,
-            invoiceUrl,
             message: 'Order created successfully'
         });
 
