@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/database';
 import { sendSMS } from '@/lib/notifications';
+import QRCode from 'qrcode';
 
 export async function POST(request) {
     try {
-        console.log('API Request Started - Version: NO_PDF_WRITE_FIX_v2 - FORCE_REDEPLOY');
+        console.log('API Request Started - Version: QR_CODE_GENERATION');
         const data = await request.json();
         const { customer, pricing, couponApplied } = data;
 
@@ -18,6 +19,27 @@ export async function POST(request) {
 
         // Create random ID
         const orderId = `ELITE-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+
+        // Generate UPI payment URL
+        const upiId = process.env.UPI_ID || 'riya4862@airtel';
+        const amount = 600;
+        const upiUrl = `upi://pay?pa=${upiId}&pn=EliteMarts&am=${amount}&tn=Order_${orderId}&cu=INR`;
+
+        // Generate QR code as base64 data URL
+        let qrCodeImage;
+        try {
+            qrCodeImage = await QRCode.toDataURL(upiUrl, {
+                width: 300,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            });
+        } catch (qrError) {
+            console.error('QR generation failed:', qrError);
+            qrCodeImage = null;
+        }
 
         const orderDoc = {
             orderId,
@@ -37,6 +59,16 @@ export async function POST(request) {
                 prepaidAmount: 600,
                 balanceDue: pricing.balanceDue
             },
+            qrCode: {
+                data: upiUrl,
+                imageUrl: qrCodeImage,
+                upiId: upiId,
+                amount: amount,
+                generatedAt: new Date(),
+                expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
+                isExpired: false
+            },
+            paymentStatus: 'pending',
             status: "pending",
             createdAt: new Date(),
             updatedAt: new Date()
@@ -82,7 +114,13 @@ export async function POST(request) {
         return NextResponse.json({
             success: true,
             orderId,
-            message: 'Order created successfully'
+            message: 'Order created successfully',
+            qrCode: {
+                imageUrl: orderDoc.qrCode.imageUrl,
+                upiId: orderDoc.qrCode.upiId,
+                amount: orderDoc.qrCode.amount,
+                expiresAt: orderDoc.qrCode.expiresAt
+            }
         });
 
     } catch (error) {

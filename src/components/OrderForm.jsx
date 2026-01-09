@@ -157,7 +157,13 @@ export default function OrderForm() {
             console.log('Response data:', result);
 
             if (response.ok) {
-                setOrderData({ ...data, orderId: result.orderId });
+                // Store order data with QR code
+                const orderDataWithQR = {
+                    ...data,
+                    orderId: result.orderId,
+                    qrCode: result.qrCode
+                };
+                setOrderData(orderDataWithQR);
 
                 // Success celebration
                 setShowSuccess(true);

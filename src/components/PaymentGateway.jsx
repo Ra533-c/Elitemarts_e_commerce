@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { Copy, Check, Smartphone, Info, AlertCircle, Monitor, Download, CheckCircle, Package } from 'lucide-react';
+import { Copy, Check, Smartphone, Info, AlertCircle, Monitor, Download, CheckCircle, Package, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 import { generateClientInvoice } from '@/lib/clientInvoice';
@@ -17,8 +17,10 @@ export default function PaymentGateway({ orderId, amount = 600, orderData, prici
     const [paymentStatus, setPaymentStatus] = useState('pending'); // pending, verified, failed
     const [pollingInterval, setPollingInterval] = useState(null);
 
-    const upiId = 'riya4862@airtel';
-    const upiLink = `upi://pay?pa=${upiId}&pn=EliteMarts&am=${amount}&cu=INR&tn=Order ${orderId}`;
+    // Get QR code data from orderData
+    const qrCodeImage = orderData?.qrCode?.imageUrl;
+    const upiId = orderData?.qrCode?.upiId || 'riya4862@airtel';
+    const upiLink = orderData?.qrCode?.data || `upi://pay?pa=${upiId}&pn=EliteMarts&am=${amount}&cu=INR&tn=Order ${orderId}`;
 
     // Countdown timer effect
     useEffect(() => {
@@ -68,8 +70,8 @@ export default function PaymentGateway({ orderId, amount = 600, orderData, prici
         // Initial check
         checkPaymentStatus();
 
-        // Set up polling every 5 seconds
-        const interval = setInterval(checkPaymentStatus, 5000);
+        // Set up polling every 10 seconds (as requested)
+        const interval = setInterval(checkPaymentStatus, 10000);
         setPollingInterval(interval);
 
         return () => {
@@ -244,12 +246,17 @@ export default function PaymentGateway({ orderId, amount = 600, orderData, prici
                         </p>
 
                         <div className="bg-white p-3 sm:p-4 inline-block rounded-2xl border-4 border-indigo-600 mb-4 sm:mb-6 shadow-lg">
-                            <QRCodeSVG
-                                value={upiLink}
-                                size={typeof window !== 'undefined' && window.innerWidth < 640 ? 180 : 220}
-                                level="H"
-                                includeMargin={true}
-                            />
+                            {qrCodeImage ? (
+                                <img
+                                    src={qrCodeImage}
+                                    alt="UPI Payment QR Code"
+                                    className="w-[180px] h-[180px] sm:w-[220px] sm:h-[220px]"
+                                />
+                            ) : (
+                                <div className="w-[180px] h-[180px] sm:w-[220px] sm:h-[220px] flex items-center justify-center bg-gray-100 rounded">
+                                    <p className="text-gray-500 text-sm text-center px-4">QR Code Loading...</p>
+                                </div>
+                            )}
                         </div>
 
                         <div className="space-y-4 sm:space-y-5">
@@ -345,6 +352,43 @@ export default function PaymentGateway({ orderId, amount = 600, orderData, prici
                                     <p className="text-xs text-green-700 mt-2 text-center">
                                         ✅ Click this after making the ₹{amount} payment
                                     </p>
+
+                                    {/* Manual Check Status Button */}
+                                    <div className="mt-3 pt-3 border-t border-green-200">
+                                        <button
+                                            onClick={async () => {
+                                                setCheckingStatus(true);
+                                                try {
+                                                    const response = await fetch(`/api/order/status?orderId=${orderId}`);
+                                                    const data = await response.json();
+
+                                                    if (data.order) {
+                                                        const status = data.order.paymentStatus || 'pending';
+                                                        setPaymentStatus(status);
+
+                                                        if (status === 'verified') {
+                                                            toast.success('Payment verified! 🎉');
+                                                        } else if (status === 'failed') {
+                                                            toast.error('Payment failed');
+                                                        } else {
+                                                            toast.info('Payment still pending');
+                                                        }
+                                                    }
+                                                } catch (error) {
+                                                    toast.error('Failed to check status');
+                                                } finally {
+                                                    setCheckingStatus(false);
+                                                }
+                                            }}
+                                            className="w-full bg-white text-green-700 border-2 border-green-600 py-2 rounded-xl flex items-center justify-center gap-2 hover:bg-green-50 transition-all font-semibold text-sm"
+                                        >
+                                            <RefreshCw size={18} />
+                                            Check Payment Status
+                                        </button>
+                                        <p className="text-xs text-gray-600 mt-1 text-center">
+                                            Auto-checks every 10 seconds
+                                        </p>
+                                    </div>
                                 </>
                             )}
                         </div>
