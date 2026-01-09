@@ -353,29 +353,44 @@ export default function PaymentGateway({ orderId, amount = 600, orderData, prici
                                         ✅ Click this after making the ₹{amount} payment
                                     </p>
 
+
                                     {/* Manual Check Status Button */}
                                     <div className="mt-3 pt-3 border-t border-green-200">
                                         <button
                                             onClick={async () => {
                                                 setCheckingStatus(true);
                                                 try {
+                                                    console.log('🔍 Checking status for orderId:', orderId);
                                                     const response = await fetch(`/api/order/status?orderId=${orderId}`);
-                                                    const data = await response.json();
+                                                    console.log('📡 Response status:', response.status);
 
-                                                    if (data.order) {
-                                                        const status = data.order.paymentStatus || 'pending';
+                                                    const data = await response.json();
+                                                    console.log('📦 Response data:', data);
+
+                                                    if (!response.ok) {
+                                                        throw new Error(data.error || 'Failed to fetch order');
+                                                    }
+
+                                                    if (data.success && data.order) {
+                                                        const status = data.order.paymentStatus || data.order.status || 'pending';
+                                                        console.log('✅ Payment status:', status);
                                                         setPaymentStatus(status);
 
-                                                        if (status === 'verified') {
+                                                        if (status === 'verified' || data.order.status === 'paid') {
                                                             toast.success('Payment verified! 🎉');
+                                                            setPaymentCompleted(true);
                                                         } else if (status === 'failed') {
                                                             toast.error('Payment failed');
                                                         } else {
-                                                            toast.info('Payment still pending');
+                                                            toast.info('Payment still pending verification');
                                                         }
+                                                    } else {
+                                                        console.error('❌ No order data:', data);
+                                                        toast.error(data.error || 'Order not found');
                                                     }
                                                 } catch (error) {
-                                                    toast.error('Failed to check status');
+                                                    console.error('❌ Status check error:', error);
+                                                    toast.error(`Failed: ${error.message}`);
                                                 } finally {
                                                     setCheckingStatus(false);
                                                 }
