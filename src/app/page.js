@@ -20,7 +20,7 @@ export default function Home() {
       <section className="py-12 sm:py-20 px-4 bg-gradient-to-br from-gray-50 to-indigo-50">
         <div className="text-center mb-12 sm:mb-16">
           <h2 className="text-3xl sm:text-4xl md:text-6xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-4 sm:mb-6 px-4">
-            Rajnis Goswami
+            Order Your Relief Today
           </h2>
           <p className="text-gray-600 text-base sm:text-xl max-w-2xl mx-auto px-4">
             Limited stock available. Secure your unit with a small booking fee of just ₹600.
