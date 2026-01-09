@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -31,14 +31,86 @@ export default function OrderForm() {
     });
     const [loadingPincode, setLoadingPincode] = useState(false);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [paymentCompleted, setPaymentCompleted] = useState(false);
 
     const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
         resolver: zodResolver(orderSchema)
     });
 
-    const pincode = watch('pincode');
+    // Check for saved order data and payment status on component mount
+    useEffect(() => {
+        // Load saved order data
+        const savedOrderData = localStorage.getItem('elitemarts_orderData');
+        const savedPricing = localStorage.getItem('elitemarts_pricing');
+        const savedStep = localStorage.getItem('elitemarts_step');
 
-    // Auto-detect city and state from pincode
+        if (savedOrderData) {
+            setOrderData(JSON.parse(savedOrderData));
+        }
+
+        if (savedPricing) {
+            setPricing(JSON.parse(savedPricing));
+        }
+
+        if (savedStep) {
+            setStep(parseInt(savedStep));
+        }
+
+        // Check payment status for saved order
+        if (savedOrderData) {
+            const orderDataParsed = JSON.parse(savedOrderData);
+            if (orderDataParsed.orderId) {
+                const savedPaymentStatus = localStorage.getItem(`payment_${orderDataParsed.orderId}`);
+                if (savedPaymentStatus === 'completed') {
+                    setPaymentCompleted(true);
+                }
+            }
+        }
+    }, []);
+
+    // Save order data to localStorage whenever it changes
+    useEffect(() => {
+        if (orderData) {
+            localStorage.setItem('elitemarts_orderData', JSON.stringify(orderData));
+        }
+    }, [orderData]);
+
+    useEffect(() => {
+        localStorage.setItem('elitemarts_pricing', JSON.stringify(pricing));
+    }, [pricing]);
+
+    useEffect(() => {
+        localStorage.setItem('elitemarts_step', step.toString());
+    }, [step]);
+
+    const handlePaymentComplete = async (orderId) => {
+        try {
+            // Update payment status in database
+            const response = await fetch('/api/order/status', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    orderId,
+                    status: 'paid'
+                }),
+            });
+
+            if (response.ok) {
+                setPaymentCompleted(true);
+                // Save payment status to localStorage
+                localStorage.setItem(`payment_${orderId}`, 'completed');
+                // Move to final step
+                setStep(4);
+                toast.success('Payment confirmed! You can now download your invoice.');
+            } else {
+                console.error('Failed to update payment status');
+            }
+        } catch (error) {
+            console.error('Error updating payment status:', error);
+        }
+    };
     const handlePincodeChange = async (e) => {
         const pin = e.target.value;
         setValue('pincode', pin);
@@ -152,9 +224,9 @@ export default function OrderForm() {
                     style={{ width: step === 1 ? '0%' : '100%' }}
                 ></div>
 
-                {['Details', 'Payment'].map((label, idx) => (
+                {['Details', paymentCompleted ? 'Payment Complete' : 'Payment'].map((label, idx) => (
                     <div key={label} className="flex flex-col items-center bg-white px-2">
-                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold transition-all text-sm sm:text-base ${step > idx + 1 ? 'bg-green-500 text-white shadow-lg' :
+                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold transition-all text-sm sm:text-base ${step > idx + 1 || (idx + 1 === 2 && paymentCompleted) ? 'bg-green-500 text-white shadow-lg' :
                             step === idx + 1 ? 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white ring-4 ring-indigo-100 shadow-lg' :
                                 'bg-gray-200 text-gray-500'
                             }`}>
@@ -285,6 +357,7 @@ export default function OrderForm() {
                             amount={600}
                             orderData={orderData}
                             pricing={pricing}
+                            onPaymentComplete={handlePaymentComplete}
                         />
                     </motion.div>
                 )}
