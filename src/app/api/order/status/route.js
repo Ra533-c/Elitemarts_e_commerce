@@ -19,16 +19,31 @@ export async function GET(request) {
             return NextResponse.json({ error: 'Order not found' }, { status: 404 });
         }
 
+        // Auto-expire old QR codes
+        if (order.qrCode?.expiresAt && new Date() > new Date(order.qrCode.expiresAt) && order.paymentStatus === 'pending') {
+            await db.collection('orders').updateOne(
+                { orderId: orderId.toUpperCase() },
+                { $set: { paymentStatus: 'failed', updatedAt: new Date() } }
+            );
+            order.paymentStatus = 'failed';
+        }
+
         return NextResponse.json({
             success: true,
             order: {
-                ...order,
-                // Ensure these fields are explicitly sent
-                paymentStatus: order.paymentStatus || 'pending',
-                verifiedAt: order.paymentVerifiedAt || null,
-                createdAt: order.createdAt
+                orderId: order.orderId,
+                customerName: order.customerName,
+                phone: order.phone,
+                address: order.address,
+                pricing: order.pricing,
+                paymentStatus: order.paymentStatus,
+                status: order.status,
+                createdAt: order.createdAt,
+                verifiedAt: order.verifiedAt,
+                paymentVerifiedAt: order.paymentVerifiedAt,
+                qrCode: order.qrCode
             },
-            status: order.paymentStatus || 'pending',
+            status: order.paymentStatus,
             canDownloadInvoice: order.paymentStatus === 'verified' || order.status === 'paid'
         });
 

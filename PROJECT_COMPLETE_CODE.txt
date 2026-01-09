@@ -1,0 +1,3068 @@
+===========================================
+ELITEMARTS PROJECT - COMPLETE SOURCE CODE
+Generated: 01/09/2026 20:22:15
+===========================================
+
+
+
+================================================================================
+FILE: src\app\admin\page.js
+================================================================================
+
+'use client';
+
+import AdminPaymentVerification from '@/components/AdminPaymentVerification';
+
+export default function AdminPanel() {
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 py-8 px-4">
+            <div className="max-w-7xl mx-auto">
+                <div className="text-center mb-8">
+                    <h1 className="text-4xl font-bold text-gray-900 mb-2">
+                        Admin Panel
+                    </h1>
+                    <p className="text-gray-600">
+                        Verify or reject pending UPI payments
+                    </p>
+                </div>
+
+                <AdminPaymentVerification />
+            </div>
+        </div>
+    );
+}
+
+
+
+================================================================================
+FILE: src\app\api\admin\orders\route.js
+================================================================================
+
+import { NextResponse } from 'next/server';
+import clientPromise from '@/lib/database';
+
+export async function GET(request) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const password = searchParams.get('password');
+
+        if (password !== 'admin123') {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const client = await clientPromise;
+        const db = client.db('elitemarts');
+
+        const orders = await db.collection('orders')
+            .find({ status: 'pending' })
+            .sort({ createdAt: -1 })
+            .toArray();
+
+        return NextResponse.json({ orders });
+
+    } catch (error) {
+        return NextResponse.json(
+            { error: 'Fetch failed' },
+            { status: 500 }
+        );
+    }
+}
+
+
+
+================================================================================
+FILE: src\app\api\order\route.js
+================================================================================
+
+import { NextResponse } from 'next/server';
+import clientPromise from '@/lib/database';
+import { sendSMS } from '@/lib/notifications';
+import QRCode from 'qrcode';
+
+export async function POST(request) {
+    try {
+        console.log('API Request Started - Version: QR_CODE_GENERATION');
+        const data = await request.json();
+        const { customer, pricing, couponApplied } = data;
+
+        // Validate required fields
+        if (!customer || !customer.name || !customer.phone || !customer.address) {
+            return NextResponse.json(
+                { error: 'Missing required customer information' },
+                { status: 400 }
+            );
+        }
+
+        // Create random ID
+        const orderId = `ELITE-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+
+        // Generate UPI payment URL
+        const upiId = process.env.UPI_ID || 'riya4862@airtel';
+        const amount = 600;
+        const upiUrl = `upi://pay?pa=${upiId}&pn=EliteMarts&am=${amount}&tn=Order_${orderId}&cu=INR`;
+
+        // Generate QR code as base64 data URL
+        let qrCodeImage;
+        try {
+            qrCodeImage = await QRCode.toDataURL(upiUrl, {
+                width: 300,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            });
+        } catch (qrError) {
+            console.error('QR generation failed:', qrError);
+            qrCodeImage = null;
+        }
+
+        const orderDoc = {
+            orderId,
+            customerName: customer.name,
+            phone: customer.phone,
+            address: {
+                street: customer.address,
+                city: customer.city,
+                state: customer.state,
+                pincode: customer.pincode
+            },
+            pricing: {
+                originalPrice: 2999,
+                couponApplied,
+                couponCode: couponApplied ? "ELITEMARTS27" : null,
+                finalPrice: pricing.finalPrice,
+                prepaidAmount: 600,
+                balanceDue: pricing.balanceDue
+            },
+            qrCode: {
+                data: upiUrl,
+                imageUrl: qrCodeImage,
+                upiId: upiId,
+                amount: amount,
+                generatedAt: new Date(),
+                expiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
+                isExpired: false
+            },
+            paymentStatus: 'pending',
+            status: "pending",
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+
+        // Save to DB with better error handling
+        let client;
+        try {
+            client = await clientPromise;
+            console.log('MongoDB connected successfully');
+        } catch (dbError) {
+            console.error('MongoDB connection failed:', dbError);
+            return NextResponse.json(
+                { error: 'Database connection failed. Please try again.' },
+                { status: 503 }
+            );
+        }
+
+        const db = client.db('elitemarts');
+
+        try {
+            await db.collection('orders').insertOne(orderDoc);
+            console.log('Order saved:', orderId);
+        } catch (insertError) {
+            console.error('Order insert failed:', insertError);
+            return NextResponse.json(
+                { error: 'Failed to save order. Please try again.' },
+                { status: 500 }
+            );
+        }
+
+        // Send SMS (non-blocking)
+        try {
+            await sendSMS({
+                to: customer.phone,
+                message: `Your order ${orderId} is placed! Please wait for payment verification.`
+            });
+        } catch (smsError) {
+            console.error('SMS failed:', smsError);
+            // Don't fail the order if SMS fails
+        }
+
+        return NextResponse.json({
+            success: true,
+            orderId,
+            message: 'Order created successfully',
+            qrCode: {
+                imageUrl: orderDoc.qrCode.imageUrl,
+                upiId: orderDoc.qrCode.upiId,
+                amount: orderDoc.qrCode.amount,
+                expiresAt: orderDoc.qrCode.expiresAt
+            }
+        });
+
+    } catch (error) {
+        console.error('Order Error:', error);
+        console.error('Error details:', error.message);
+        console.error('Error stack:', error.stack);
+
+        return NextResponse.json(
+            {
+                error: 'Order creation failed. Please try again.',
+                details: process.env.NODE_ENV === 'development' ? error.message : undefined
+            },
+            { status: 500 }
+        );
+    }
+}
+
+
+
+================================================================================
+FILE: src\app\api\order\status\route.js
+================================================================================
+
+import { NextResponse } from 'next/server';
+import clientPromise from '@/lib/database';
+
+export async function GET(request) {
+    try {
+        const { searchParams } = new URL(request.url);
+        const orderId = searchParams.get('orderId');
+
+        if (!orderId) {
+            return NextResponse.json({ error: 'Order ID required' }, { status: 400 });
+        }
+
+        const client = await clientPromise;
+        const db = client.db('elitemarts');
+
+        const order = await db.collection('orders').findOne({ orderId: orderId.toUpperCase() });
+
+        if (!order) {
+            return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+        }
+
+        return NextResponse.json({
+            success: true,
+            order: {
+                ...order,
+                // Ensure these fields are explicitly sent
+                paymentStatus: order.paymentStatus || 'pending',
+                verifiedAt: order.paymentVerifiedAt || null,
+                createdAt: order.createdAt
+            },
+            status: order.paymentStatus || 'pending',
+            canDownloadInvoice: order.paymentStatus === 'verified' || order.status === 'paid'
+        });
+
+    } catch (error) {
+        console.error('Order lookup error:', error);
+        return NextResponse.json(
+            { error: 'Failed to fetch order' },
+            { status: 500 }
+        );
+    }
+}
+
+export async function PUT(request) {
+    try {
+        const data = await request.json();
+        const { orderId, status, paymentStatus, verifiedBy } = data;
+
+        if (!orderId) {
+            return NextResponse.json({ error: 'Order ID required' }, { status: 400 });
+        }
+
+        const client = await clientPromise;
+        const db = client.db('elitemarts');
+
+        const updateFields = {
+            updatedAt: new Date()
+        };
+
+        // Update order status if provided
+        if (status) {
+            updateFields.status = status;
+            if (status === 'paid') {
+                updateFields.paymentCompletedAt = new Date();
+            }
+        }
+
+        // Update payment verification status if provided
+        if (paymentStatus) {
+            updateFields.paymentStatus = paymentStatus;
+
+            if (paymentStatus === 'verified') {
+                updateFields.paymentVerifiedAt = new Date();
+                updateFields.status = 'paid';
+                if (verifiedBy) {
+                    updateFields.verifiedBy = verifiedBy;
+                }
+            } else if (paymentStatus === 'failed') {
+                updateFields.paymentFailedAt = new Date();
+                updateFields.status = 'pending';
+            }
+        }
+
+        const result = await db.collection('orders').updateOne(
+            { orderId: orderId.toUpperCase() },
+            { $set: updateFields }
+        );
+
+        if (result.matchedCount === 0) {
+            return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: 'Order status updated successfully',
+            paymentStatus: paymentStatus || null
+        });
+
+    } catch (error) {
+        console.error('Order status update error:', error);
+        return NextResponse.json(
+            { error: 'Failed to update order status' },
+            { status: 500 }
+        );
+    }
+}
+
+
+
+================================================================================
+FILE: src\app\api\order\verify-payment\route.js
+================================================================================
+
+import { NextResponse } from 'next/server';
+import clientPromise from '@/lib/database';
+
+// Admin endpoint to verify or reject payments
+export async function POST(request) {
+    try {
+        const data = await request.json();
+        const { orderId, action, adminName } = data;
+
+        if (!orderId || !action) {
+            return NextResponse.json(
+                { error: 'Order ID and action (verify/reject) required' },
+                { status: 400 }
+            );
+        }
+
+        if (action !== 'verify' && action !== 'reject') {
+            return NextResponse.json(
+                { error: 'Action must be either "verify" or "reject"' },
+                { status: 400 }
+            );
+        }
+
+        const client = await clientPromise;
+        const db = client.db('elitemarts');
+
+        // Get the order first to check if it exists
+        const order = await db.collection('orders').findOne({
+            orderId: orderId.toUpperCase()
+        });
+
+        if (!order) {
+            return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+        }
+
+        const updateFields = {
+            updatedAt: new Date(),
+            verifiedBy: adminName || 'Admin',
+        };
+
+        if (action === 'verify') {
+            updateFields.paymentStatus = 'verified';
+            updateFields.paymentVerifiedAt = new Date();
+            updateFields.status = 'paid';
+        } else {
+            updateFields.paymentStatus = 'failed';
+            updateFields.paymentFailedAt = new Date();
+            updateFields.paymentFailedReason = 'Payment not received or incorrect amount';
+        }
+
+        const result = await db.collection('orders').updateOne(
+            { orderId: orderId.toUpperCase() },
+            { $set: updateFields }
+        );
+
+        return NextResponse.json({
+            success: true,
+            message: action === 'verify'
+                ? 'Payment verified successfully'
+                : 'Payment marked as failed',
+            orderId: orderId.toUpperCase(),
+            paymentStatus: updateFields.paymentStatus
+        });
+
+    } catch (error) {
+        console.error('Payment verification error:', error);
+        return NextResponse.json(
+            { error: 'Failed to verify payment' },
+            { status: 500 }
+        );
+    }
+}
+
+// Get all pending payments for admin verification
+export async function GET(request) {
+    try {
+        const client = await clientPromise;
+        const db = client.db('elitemarts');
+
+        // Get orders with pending payment status
+        const pendingOrders = await db.collection('orders')
+            .find({
+                $or: [
+                    { paymentStatus: 'pending' },
+                    { paymentStatus: { $exists: false }, status: 'pending' }
+                ]
+            })
+            .sort({ createdAt: -1 })
+            .limit(50)
+            .toArray();
+
+        return NextResponse.json({
+            success: true,
+            orders: pendingOrders,
+            count: pendingOrders.length
+        });
+
+    } catch (error) {
+        console.error('Failed to fetch pending orders:', error);
+        return NextResponse.json(
+            { error: 'Failed to fetch pending orders' },
+            { status: 500 }
+        );
+    }
+}
+
+
+
+================================================================================
+FILE: src\app\api\test-db\route.js
+================================================================================
+
+import { NextResponse } from 'next/server';
+import clientPromise from '@/lib/database';
+
+export async function GET() {
+    try {
+        const client = await clientPromise;
+        const db = client.db('elitemarts');
+
+        // Test connection
+        await db.command({ ping: 1 });
+
+        // Get database stats
+        const stats = await db.stats();
+
+        return NextResponse.json({
+            success: true,
+            message: 'MongoDB connected successfully!',
+            database: 'elitemarts',
+            collections: stats.collections || 0,
+            dataSize: stats.dataSize || 0
+        });
+    } catch (error) {
+        console.error('MongoDB Test Error:', error);
+        return NextResponse.json({
+            success: false,
+            error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        }, { status: 500 });
+    }
+}
+
+
+
+================================================================================
+FILE: src\app\api\verify\route.js
+================================================================================
+
+import { NextResponse } from 'next/server';
+import clientPromise from '@/lib/database';
+import { sendSMS } from '@/lib/notifications';
+
+export async function POST(request) {
+    try {
+        const { orderId, password } = await request.json();
+
+        // Simple Admin Auth
+        if (password !== 'admin123') { // Replace with env var in real app
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const client = await clientPromise;
+        const db = client.db('elitemarts');
+
+        const updateResult = await db.collection('orders').updateOne(
+            { orderId },
+            {
+                $set: {
+                    status: 'paid',
+                    paymentVerifiedAt: new Date(),
+                    updatedAt: new Date()
+                }
+            }
+        );
+
+        if (updateResult.modifiedCount === 0) {
+            return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+        }
+
+        // Fetch order to get phone number
+        const order = await db.collection('orders').findOne({ orderId });
+
+        if (order) {
+            await sendSMS({
+                to: order.phone,
+                message: `Payment confirmed for Order ${orderId}! We will ship shortly.`
+            });
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: 'Payment verified'
+        });
+
+    } catch (error) {
+        console.error('Verify Error:', error);
+        return NextResponse.json(
+            { error: 'Verification failed' },
+            { status: 500 }
+        );
+    }
+}
+
+
+
+================================================================================
+FILE: src\app\globals.css
+================================================================================
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+:root {
+  /* Modern Color Palette */
+  --primary-600: #6366f1;
+  --primary-700: #4f46e5;
+  --primary-800: #4338ca;
+  --accent-500: #10b981;
+  --accent-600: #059669;
+  --background: #fafaf9;
+  --surface: #ffffff;
+  --foreground: #0f172a;
+  --muted: #64748b;
+  --border: #e2e8f0;
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  --gradient-accent: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--foreground);
+  background: var(--background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 700;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary-600);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-700);
+}
+
+
+================================================================================
+FILE: src\app\layout.js
+================================================================================
+
+import { Toaster } from "react-hot-toast";
+import "./globals.css";
+
+export const metadata = {
+  title: "EliteMarts - Robotic Neck & Shoulder Massager",
+  description: "Professional-grade relief at home. Get instant relaxation with our premium robotic massager.",
+};
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body className="antialiased">
+        {children}
+        <Toaster position="bottom-center" />
+      </body>
+    </html>
+  );
+}
+
+
+
+================================================================================
+FILE: src\app\page.js
+================================================================================
+
+import HeroSection from "@/components/HeroSection";
+import ProductShowcase from "@/components/ProductShowcase";
+import OrderForm from "@/components/OrderForm";
+import OrderLookup from "@/components/OrderLookup";
+import InstagramButton from "@/components/InstagramButton";
+import CountdownTimer from "@/components/CountdownTimer";
+import { Zap, Instagram, Package, RefreshCw } from "lucide-react";
+
+export default function Home() {
+  return (
+    <main className="min-h-screen">
+      {/* Countdown Timer - Sticky at top */}
+      <CountdownTimer />
+
+      <HeroSection />
+
+      <ProductShowcase />
+
+      {/* Order Section */}
+      <section className="py-12 sm:py-20 px-4 bg-gradient-to-br from-gray-50 to-indigo-50">
+        <div className="text-center mb-12 sm:mb-16">
+          <h2 className="text-3xl sm:text-4xl md:text-6xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-4 sm:mb-6 px-4">
+            Order Your Relief Today
+          </h2>
+          <p className="text-gray-600 text-base sm:text-xl max-w-2xl mx-auto px-4">
+            Limited stock available. Secure your unit with a small booking fee of just ₹600.
+          </p>
+          <div className="flex items-center justify-center gap-2 mt-4 text-orange-600">
+            <Zap size={20} fill="currentColor" />
+            <span className="font-bold text-sm sm:text-base">Only 12 units left in stock!</span>
+          </div>
+        </div>
+
+        <OrderForm />
+      </section>
+
+      {/* Order Lookup Section */}
+      <section className="py-12 sm:py-20 px-4 bg-white">
+        <div className="text-center mb-8 sm:mb-12">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900 mb-4 px-4">
+            Already Ordered?
+          </h2>
+          <p className="text-gray-600 text-base sm:text-lg px-4">
+            Check your order status and payment verification
+          </p>
+        </div>
+
+        <OrderLookup />
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-gradient-to-br from-gray-900 to-gray-800 text-white py-12 sm:py-16">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-8 sm:gap-12 mb-8 sm:mb-12">
+            <div>
+              <h3 className="text-xl sm:text-2xl font-bold mb-4 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                EliteMarts
+              </h3>
+              <p className="text-gray-400 text-sm sm:text-base">
+                Premium home wellness products for modern living.
+              </p>
+            </div>
+
+            <div>
+              <h4 className="font-bold mb-4 text-base sm:text-lg">Policies</h4>
+              <div className="space-y-3 text-gray-400 text-sm">
+                <div className="flex items-start gap-2">
+                  <Package size={16} className="shrink-0 mt-1 text-indigo-400" />
+                  <div>
+                    <p className="font-semibold text-white text-xs">Shipping:</p>
+                    <p className="text-xs">₹600 prepaid required. Rest on delivery.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <RefreshCw size={16} className="shrink-0 mt-1 text-green-400" />
+                  <div>
+                    <p className="font-semibold text-white text-xs">Returns:</p>
+                    <p className="text-xs">Full return & replacement within 7 days.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-bold mb-4 text-base sm:text-lg">Contact Us</h4>
+              <a
+                href="https://www.instagram.com/elitemarts_?igsh=ZDVpYXRhaWxjYnV2"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-3 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 text-white px-6 py-3 rounded-full hover:shadow-lg hover:shadow-pink-500/50 transition-all font-semibold text-sm sm:text-base"
+              >
+                <Instagram size={20} />
+                Follow us on Instagram
+              </a>
+              <p className="text-gray-400 mt-4 text-xs sm:text-sm">
+                DM us for any queries or support
+              </p>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-700 pt-6 sm:pt-8 text-center text-gray-400 text-xs sm:text-sm">
+            <p>© {new Date().getFullYear()} EliteMarts. All rights reserved.</p>
+            <p className="mt-2 text-xs">Made with ❤️ in India</p>
+          </div>
+        </div>
+      </footer>
+
+      {/* Floating Instagram Button */}
+      <InstagramButton />
+    </main>
+  );
+}
+
+
+
+================================================================================
+FILE: src\components\AdminPaymentVerification.jsx
+================================================================================
+
+'use client';
+
+import { useState, useEffect } from 'react';
+import { CheckCircle, XCircle, Clock, RefreshCw, Search, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+
+export default function AdminPaymentVerification() {
+    const [pendingOrders, setPendingOrders] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchId, setSearchId] = useState('');
+    const [processingOrderId, setProcessingOrderId] = useState(null);
+
+    const fetchPendingOrders = async () => {
+        try {
+            const response = await fetch('/api/order/verify-payment');
+            const data = await response.json();
+
+            if (data.success) {
+                setPendingOrders(data.orders || []);
+            }
+        } catch (error) {
+            console.error('Failed to fetch pending orders:', error);
+            toast.error('Failed to load pending payments');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchPendingOrders();
+        // Auto-refresh every 10 seconds
+        const interval = setInterval(fetchPendingOrders, 10000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const handleVerifyPayment = async (orderId) => {
+        setProcessingOrderId(orderId);
+        try {
+            const response = await fetch('/api/order/verify-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    orderId,
+                    action: 'verify',
+                    adminName: 'Admin' // You can replace with actual admin name
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                toast.success(`Payment verified for order ${orderId}! ✅`);
+                // Refresh the list
+                fetchPendingOrders();
+            } else {
+                toast.error('Failed to verify payment');
+            }
+        } catch (error) {
+            console.error('Verification failed:', error);
+            toast.error('Failed to verify payment');
+        } finally {
+            setProcessingOrderId(null);
+        }
+    };
+
+    const handleRejectPayment = async (orderId) => {
+        setProcessingOrderId(orderId);
+        try {
+            const response = await fetch('/api/order/verify-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    orderId,
+                    action: 'reject',
+                    adminName: 'Admin'
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                toast.success(`Payment rejected for order ${orderId}`);
+                // Refresh the list
+                fetchPendingOrders();
+            } else {
+                toast.error('Failed to reject payment');
+            }
+        } catch (error) {
+            console.error('Rejection failed:', error);
+            toast.error('Failed to reject payment');
+        } finally {
+            setProcessingOrderId(null);
+        }
+    };
+
+    const filteredOrders = pendingOrders.filter(order =>
+        !searchId || order.orderId.toLowerCase().includes(searchId.toLowerCase())
+    );
+
+    return (
+        <div className="bg-white rounded-2xl shadow-xl p-6 max-w-6xl mx-auto my-8">
+            <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <Clock className="text-indigo-600" size={28} />
+                    Payment Verification
+                </h2>
+                <button
+                    onClick={fetchPendingOrders}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                    <RefreshCw size={18} />
+                    Refresh
+                </button>
+            </div>
+
+            {/* Search Bar */}
+            <div className="mb-6">
+                <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                    <input
+                        type="text"
+                        placeholder="Search by Order ID..."
+                        value={searchId}
+                        onChange={(e) => setSearchId(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none"
+                    />
+                </div>
+            </div>
+
+            {loading ? (
+                <div className="text-center py-12">
+                    <Loader2 className="animate-spin mx-auto mb-3 text-indigo-600" size={48} />
+                    <p className="text-gray-600">Loading pending payments...</p>
+                </div>
+            ) : filteredOrders.length === 0 ? (
+                <div className="text-center py-12 bg-gray-50 rounded-xl">
+                    <CheckCircle className="mx-auto mb-3 text-green-600" size={48} />
+                    <p className="text-gray-600 font-semibold">No pending payments to verify!</p>
+                    <p className="text-sm text-gray-500 mt-1">All caught up 🎉</p>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    {filteredOrders.map((order) => (
+                        <div
+                            key={order._id}
+                            className="border-2 border-gray-200 rounded-xl p-5 hover:border-indigo-300 transition-all"
+                        >
+                            <div className="grid md:grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-sm text-gray-600 font-semibold mb-1">Order ID</p>
+                                    <p className="font-mono font-bold text-lg text-indigo-700">{order.orderId}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-600 font-semibold mb-1">Customer</p>
+                                    <p className="font-semibold text-gray-900">{order.customer?.name || 'N/A'}</p>
+                                    <p className="text-sm text-gray-600">{order.customer?.phone || 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-600 font-semibold mb-1">Amount</p>
+                                    <p className="text-2xl font-bold text-green-600">₹600</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-600 font-semibold mb-1">Created</p>
+                                    <p className="text-gray-700">
+                                        {new Date(order.createdAt).toLocaleString('en-IN', {
+                                            dateStyle: 'medium',
+                                            timeStyle: 'short'
+                                        })}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 mt-4">
+                                <button
+                                    onClick={() => handleVerifyPayment(order.orderId)}
+                                    disabled={processingOrderId === order.orderId}
+                                    className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 rounded-xl flex items-center justify-center gap-2 hover:from-green-700 hover:to-emerald-700 transition-all font-bold disabled:opacity-50"
+                                >
+                                    {processingOrderId === order.orderId ? (
+                                        <>
+                                            <Loader2 className="animate-spin" size={20} />
+                                            Processing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <CheckCircle size={20} />
+                                            Verify Payment
+                                        </>
+                                    )}
+                                </button>
+                                <button
+                                    onClick={() => handleRejectPayment(order.orderId)}
+                                    disabled={processingOrderId === order.orderId}
+                                    className="flex-1 bg-gradient-to-r from-red-600 to-rose-600 text-white py-3 rounded-xl flex items-center justify-center gap-2 hover:from-red-700 hover:to-rose-700 transition-all font-bold disabled:opacity-50"
+                                >
+                                    {processingOrderId === order.orderId ? (
+                                        <>
+                                            <Loader2 className="animate-spin" size={20} />
+                                            Processing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <XCircle size={20} />
+                                            Reject Payment
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            <div className="mt-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+                <div className="flex gap-3">
+                    <Clock className="text-blue-600 shrink-0" size={24} />
+                    <div className="text-sm text-blue-900">
+                        <p className="font-bold mb-1">Instructions:</p>
+                        <ul className="space-y-1 text-blue-800">
+                            <li>• Check your UPI account for ₹600 payments</li>
+                            <li>• Match Order ID with payment transaction note</li>
+                            <li>• Click "Verify" if payment received correctly</li>
+                            <li>• Click "Reject" if payment not found or incorrect amount</li>
+                            <li>• Customer gets instant notification of verification status</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+
+
+================================================================================
+FILE: src\components\CountdownTimer.jsx
+================================================================================
+
+'use client';
+
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Clock, Zap } from 'lucide-react';
+
+export default function CountdownTimer() {
+    const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
+    const [deadline, setDeadline] = useState(null);
+
+    useEffect(() => {
+        // Get or create deadline (24 hours from first visit)
+        let storedDeadline = localStorage.getItem('elitemarts_deadline');
+
+        if (!storedDeadline) {
+            // Create new deadline 24 hours from now
+            const newDeadline = new Date().getTime() + (24 * 60 * 60 * 1000);
+            localStorage.setItem('elitemarts_deadline', newDeadline.toString());
+            storedDeadline = newDeadline.toString();
+        }
+
+        setDeadline(parseInt(storedDeadline));
+    }, []);
+
+    useEffect(() => {
+        if (!deadline) return;
+
+        const timer = setInterval(() => {
+            const now = new Date().getTime();
+            const distance = deadline - now;
+
+            if (distance < 0) {
+                // Deadline passed, create new one
+                const newDeadline = new Date().getTime() + (24 * 60 * 60 * 1000);
+                localStorage.setItem('elitemarts_deadline', newDeadline.toString());
+                setDeadline(newDeadline);
+                return;
+            }
+
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+            setTimeLeft({ hours, minutes, seconds });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [deadline]);
+
+    if (!deadline) return null;
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gradient-to-r from-red-600 via-orange-600 to-red-600 text-white py-3 px-4 sticky top-0 z-40 shadow-lg"
+        >
+            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-center">
+                <div className="flex items-center gap-2">
+                    <Zap size={20} fill="currentColor" className="animate-pulse" />
+                    <span className="font-bold text-sm sm:text-base">FLASH SALE ENDS IN:</span>
+                </div>
+
+                <div className="flex items-center gap-2 sm:gap-3">
+                    <div className="bg-white/20 backdrop-blur-sm px-2 sm:px-3 py-1 sm:py-2 rounded-lg min-w-[50px] sm:min-w-[60px]">
+                        <div className="text-xl sm:text-2xl font-black">{String(timeLeft.hours).padStart(2, '0')}</div>
+                        <div className="text-[10px] sm:text-xs font-semibold opacity-90">HOURS</div>
+                    </div>
+                    <span className="text-xl sm:text-2xl font-bold">:</span>
+                    <div className="bg-white/20 backdrop-blur-sm px-2 sm:px-3 py-1 sm:py-2 rounded-lg min-w-[50px] sm:min-w-[60px]">
+                        <div className="text-xl sm:text-2xl font-black">{String(timeLeft.minutes).padStart(2, '0')}</div>
+                        <div className="text-[10px] sm:text-xs font-semibold opacity-90">MINS</div>
+                    </div>
+                    <span className="text-xl sm:text-2xl font-bold">:</span>
+                    <div className="bg-white/20 backdrop-blur-sm px-2 sm:px-3 py-1 sm:py-2 rounded-lg min-w-[50px] sm:min-w-[60px]">
+                        <div className="text-xl sm:text-2xl font-black">{String(timeLeft.seconds).padStart(2, '0')}</div>
+                        <div className="text-[10px] sm:text-xs font-semibold opacity-90">SECS</div>
+                    </div>
+                </div>
+            </div>
+        </motion.div>
+    );
+}
+
+
+
+================================================================================
+FILE: src\components\HeroSection.jsx
+================================================================================
+
+'use client';
+
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { Sparkles, ArrowDown } from 'lucide-react';
+
+export default function HeroSection() {
+    const [currentVideo, setCurrentVideo] = useState(0);
+
+    const scrollToOrder = () => {
+        const orderForm = document.getElementById('order-form');
+        if (orderForm) {
+            orderForm.scrollIntoView({ behavior: 'smooth' });
+        }
+    };
+
+    const videos = [
+        {
+            id: 0,
+            src: '/product-demo-1.mp4',
+            poster: '/product-desc.jpg',
+            title: 'Product Demo',
+            description: 'How EliteMarts Massager Works',
+            thumbnail: '/product1.jpg'
+        },
+        {
+            id: 1,
+            src: '/customer-testimonial.mp4',
+            poster: '/product1.jpg',
+            title: 'Customer Review',
+            description: 'Real User Experience',
+            thumbnail: '/product2.jpg'
+        },
+        {
+            id: 2,
+            src: '/before-after-results.mp4',
+            poster: '/product2.jpg',
+            title: 'Results',
+            description: 'Before & After Comparison',
+            thumbnail: '/product3.jpg'
+        },
+    ];
+
+    const handleVideoSelect = (videoIndex) => {
+        setCurrentVideo(videoIndex);
+    };
+
+    return (
+        <section className="relative min-h-[90vh] sm:min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500">
+            {/* Animated background elements */}
+            <div className="absolute inset-0 overflow-hidden">
+                <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-white/5 rounded-full blur-3xl animate-pulse"></div>
+                <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-white/5 rounded-full blur-3xl animate-pulse delay-1000"></div>
+            </div>
+
+            {/* Content */}
+            <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8 }}
+                className="relative z-10 text-center px-4 max-w-5xl mx-auto py-12 sm:py-20"
+            >
+                <motion.div
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 sm:px-6 py-2 sm:py-3 rounded-full text-white mb-6 sm:mb-8 border border-white/30"
+                >
+                    <Sparkles size={18} className="text-yellow-300" />
+                    <span className="font-semibold text-sm sm:text-base">Limited Time - 60% OFF</span>
+                </motion.div>
+
+                <h1 className="text-3xl sm:text-5xl md:text-7xl font-black text-white mb-4 sm:mb-6 leading-tight px-2">
+                    Robotic Neck & Shoulder
+                    <span className="block bg-gradient-to-r from-yellow-300 to-pink-300 bg-clip-text text-transparent mt-2">
+                        Massager
+                    </span>
+                </h1>
+
+                <p className="text-base sm:text-xl md:text-2xl text-white/90 mb-8 sm:mb-12 max-w-2xl mx-auto font-medium px-4">
+                    Professional-grade relief at home. Experience instant relaxation in just 15 minutes.
+                </p>
+
+                {/* Simple Video Player */}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.4 }}
+                    className="mb-8 sm:mb-12 max-w-md mx-auto"
+                >
+                    {/* Main Video Player - Clean and Simple */}
+                    <motion.div
+                        key={currentVideo}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="w-full"
+                    >
+                        <video
+                            className="w-full h-auto object-contain"
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                            controls
+                            preload="metadata"
+                            poster={videos[currentVideo].poster}
+                        >
+                            <source src={videos[currentVideo].src} type="video/mp4" />
+                            Your browser does not support the video tag.
+                        </video>
+                    </motion.div>
+
+                    {/* Video Navigation - Simple Previous/Next */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.6 }}
+                        className="flex justify-center items-center gap-4 mt-4"
+                    >
+                        <button
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleVideoSelect((currentVideo - 1 + videos.length) % videos.length);
+                            }}
+                            className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors border border-white/30 text-sm"
+                        >
+                            ← Previous
+                        </button>
+
+                        <span className="text-white/80 text-sm">
+                            {currentVideo + 1} of {videos.length}
+                        </span>
+
+                        <button
+                            onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleVideoSelect((currentVideo + 1) % videos.length);
+                            }}
+                            className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-lg hover:bg-white/30 transition-colors border border-white/30 text-sm"
+                        >
+                            Next →
+                        </button>
+                    </motion.div>
+                </motion.div>
+
+                {/* CTA Buttons */}
+                <div className="flex flex-col items-center gap-4 px-4">
+                    <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="w-full sm:w-auto bg-white text-indigo-700 px-6 sm:px-10 py-4 sm:py-5 rounded-full text-lg sm:text-xl font-bold shadow-2xl hover:shadow-3xl transition-all cursor-pointer group"
+                        onClick={scrollToOrder}
+                    >
+                        <span className="flex items-center justify-center gap-2">
+                            🚀 Order Now - ₹1,199 Only
+                            <span className="line-through text-gray-500 text-sm sm:text-base">₹2,999</span>
+                        </span>
+                    </motion.button>
+
+                    <motion.div
+                        animate={{ y: [0, 10, 0] }}
+                        transition={{ repeat: Infinity, duration: 1.5 }}
+                        className="text-white/80 flex items-center gap-2 text-sm sm:text-base"
+                    >
+                        <ArrowDown size={20} />
+                        <span>Scroll to order</span>
+                    </motion.div>
+                </div>
+
+                <p className="text-white/70 mt-6 text-xs sm:text-sm px-4">
+                    ✓ Free Delivery | ✓ 4-6 Days Shipping | ✓ Cash on Delivery Available
+                </p>
+            </motion.div>
+        </section>
+    );
+}
+
+
+
+================================================================================
+FILE: src\components\InstagramButton.jsx
+================================================================================
+
+'use client';
+
+import { Instagram } from 'lucide-react';
+import { motion } from 'framer-motion';
+
+export default function InstagramButton() {
+    return (
+        <motion.a
+            href="https://www.instagram.com/elitemarts_?igsh=ZDVpYXRhaWxjYnV2"
+            target="_blank"
+            rel="noopener noreferrer"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className="fixed bottom-6 right-6 z-50 bg-gradient-to-tr from-purple-600 via-pink-600 to-orange-500 text-white p-4 rounded-full shadow-2xl hover:shadow-pink-500/50 transition-all group"
+            aria-label="Contact us on Instagram"
+        >
+            <Instagram size={28} className="group-hover:rotate-12 transition-transform" />
+            <span className="absolute -top-12 right-0 bg-gray-900 text-white px-3 py-1 rounded-lg text-sm opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                Contact Us
+            </span>
+        </motion.a>
+    );
+}
+
+
+
+================================================================================
+FILE: src\components\OrderForm.jsx
+================================================================================
+
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
+import axios from 'axios';
+import confetti from 'canvas-confetti';
+import PaymentGateway from './PaymentGateway';
+import PricingCard from './PricingCard';
+import { User, Phone, MapPin, Package, Loader2, CheckCircle, Sparkles } from 'lucide-react';
+
+const orderSchema = z.object({
+    name: z.string().min(2, 'Name must be at least 2 characters'),
+    phone: z.string().regex(/^[6-9]\d{9}$/, 'Invalid Indian mobile number'),
+    address: z.string().min(10, 'Address is too short (min 10 chars)'),
+    city: z.string().min(2, 'City is required'),
+    state: z.string().min(2, 'State is required'),
+    pincode: z.string().regex(/^\d{6}$/, 'Invalid 6-digit PIN code'),
+});
+
+export default function OrderForm() {
+    const [step, setStep] = useState(1);
+    const [orderData, setOrderData] = useState(null);
+    const [pricing, setPricing] = useState({
+        finalPrice: 1199,
+        couponApplied: true,
+        balanceDue: 599
+    });
+    const [loadingPincode, setLoadingPincode] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [paymentCompleted, setPaymentCompleted] = useState(false);
+
+    const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
+        resolver: zodResolver(orderSchema)
+    });
+
+    // Check for saved order data and payment status on component mount
+    useEffect(() => {
+        // Load saved order data
+        const savedOrderData = localStorage.getItem('elitemarts_orderData');
+        const savedPricing = localStorage.getItem('elitemarts_pricing');
+        const savedStep = localStorage.getItem('elitemarts_step');
+
+        if (savedOrderData) {
+            setOrderData(JSON.parse(savedOrderData));
+        }
+
+        if (savedPricing) {
+            setPricing(JSON.parse(savedPricing));
+        }
+
+        if (savedStep) {
+            setStep(parseInt(savedStep));
+        }
+
+        // Check payment status for saved order
+        if (savedOrderData) {
+            const orderDataParsed = JSON.parse(savedOrderData);
+            if (orderDataParsed.orderId) {
+                const savedPaymentStatus = localStorage.getItem(`payment_${orderDataParsed.orderId}`);
+                if (savedPaymentStatus === 'completed') {
+                    setPaymentCompleted(true);
+                }
+            }
+        }
+    }, []);
+
+    // Save order data to localStorage whenever it changes
+    useEffect(() => {
+        if (orderData) {
+            localStorage.setItem('elitemarts_orderData', JSON.stringify(orderData));
+        }
+    }, [orderData]);
+
+    useEffect(() => {
+        localStorage.setItem('elitemarts_pricing', JSON.stringify(pricing));
+    }, [pricing]);
+
+    useEffect(() => {
+        localStorage.setItem('elitemarts_step', step.toString());
+    }, [step]);
+
+    const handlePaymentComplete = async (orderId) => {
+        try {
+            // Update payment status in database
+            const response = await fetch('/api/order/status', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    orderId,
+                    status: 'paid'
+                }),
+            });
+
+            if (response.ok) {
+                setPaymentCompleted(true);
+                // Save payment status to localStorage
+                localStorage.setItem(`payment_${orderId}`, 'completed');
+                // Move to final step
+                setStep(4);
+                toast.success('Payment confirmed! You can now download your invoice.');
+            } else {
+                console.error('Failed to update payment status');
+            }
+        } catch (error) {
+            console.error('Error updating payment status:', error);
+        }
+    };
+    const handlePincodeChange = async (e) => {
+        const pin = e.target.value;
+        setValue('pincode', pin);
+
+        if (pin.length === 6) {
+            setLoadingPincode(true);
+            try {
+                const response = await axios.get(`https://api.postalpincode.in/pincode/${pin}`);
+
+                if (response.data && response.data[0]?.Status === 'Success') {
+                    const postOffice = response.data[0].PostOffice[0];
+                    setValue('city', postOffice.District);
+                    setValue('state', postOffice.State);
+                    toast.success('City and State auto-filled!');
+                } else {
+                    toast.error('Invalid pincode or not found');
+                }
+            } catch (error) {
+                console.error('Pincode lookup failed:', error);
+                toast.error('Could not fetch location details');
+            } finally {
+                setLoadingPincode(false);
+            }
+        }
+    };
+
+    const onDetailsSubmit = async (data) => {
+        console.log('Form data:', data);
+        console.log('Pricing:', pricing);
+
+        try {
+            const response = await fetch('/api/order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customer: data,
+                    pricing,
+                    couponApplied: pricing.couponApplied
+                })
+            });
+
+            console.log('Response status:', response.status);
+            const result = await response.json();
+            console.log('Response data:', result);
+
+            if (response.ok) {
+                // Store order data with QR code
+                const orderDataWithQR = {
+                    ...data,
+                    orderId: result.orderId,
+                    qrCode: result.qrCode
+                };
+                setOrderData(orderDataWithQR);
+
+                // Success celebration
+                setShowSuccess(true);
+                confetti({
+                    particleCount: 150,
+                    spread: 100,
+                    origin: { y: 0.6 },
+                    colors: ['#6366f1', '#8b5cf6', '#ec4899', '#f59e0b']
+                });
+
+                setTimeout(() => {
+                    setShowSuccess(false);
+                    setStep(2);
+                }, 2000);
+
+                toast.success('Order created successfully!');
+            } else {
+                console.error('Order creation failed:', result);
+                toast.error(result.error || 'Failed to create order. Please try again.');
+            }
+        } catch (error) {
+            console.error('Submit error:', error);
+            toast.error('Network error. Please check your connection.');
+        }
+    };
+
+    return (
+        <div id="order-form" className="max-w-3xl mx-auto bg-white rounded-2xl sm:rounded-3xl shadow-2xl p-4 sm:p-8 md:p-10 my-8 sm:my-12 border-2 border-indigo-100 relative overflow-hidden">
+
+            {/* Success Animation Overlay */}
+            <AnimatePresence>
+                {showSuccess && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 bg-gradient-to-br from-indigo-600 to-purple-600 z-50 flex items-center justify-center"
+                    >
+                        <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: "spring", duration: 0.5 }}
+                            className="text-center"
+                        >
+                            <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                className="inline-block mb-4"
+                            >
+                                <Sparkles size={64} className="text-yellow-300" />
+                            </motion.div>
+                            <h3 className="text-3xl sm:text-4xl font-bold text-white mb-2">Order Created!</h3>
+                            <p className="text-white/90 text-lg">Proceeding to payment...</p>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Progress Steps */}
+            <div className="flex justify-between mb-8 sm:mb-12 max-w-md mx-auto relative">
+                <div className="absolute top-5 left-0 w-full h-1 bg-gray-200 -z-10 rounded-full"></div>
+                <div
+                    className="absolute top-5 left-0 h-1 bg-gradient-to-r from-indigo-600 to-purple-600 -z-10 rounded-full transition-all duration-500"
+                    style={{ width: step === 1 ? '0%' : '100%' }}
+                ></div>
+
+                {['Details', paymentCompleted ? 'Payment Complete' : 'Payment'].map((label, idx) => (
+                    <div key={label} className="flex flex-col items-center bg-white px-2">
+                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center font-bold transition-all text-sm sm:text-base ${step > idx + 1 || (idx + 1 === 2 && paymentCompleted) ? 'bg-green-500 text-white shadow-lg' :
+                            step === idx + 1 ? 'bg-gradient-to-br from-indigo-600 to-purple-600 text-white ring-4 ring-indigo-100 shadow-lg' :
+                                'bg-gray-200 text-gray-500'
+                            }`}>
+                            {step > idx + 1 ? <span className="text-xl sm:text-2xl">✓</span> : idx + 1}
+                        </div>
+                        <span className={`text-xs sm:text-sm font-bold mt-2 ${step === idx + 1 ? 'text-indigo-700' : 'text-gray-400'}`}>
+                            {label}
+                        </span>
+                    </div>
+                ))}
+            </div>
+
+            <AnimatePresence mode="wait">
+                {step === 1 && (
+                    <motion.div
+                        key="step1"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 20 }}
+                    >
+                        <div className="mb-8 sm:mb-10">
+                            <PricingCard onPriceChange={setPricing} />
+                        </div>
+
+                        <form onSubmit={handleSubmit(onDetailsSubmit)} className="space-y-5 sm:space-y-6">
+                            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-4 sm:mb-6 flex items-center gap-3">
+                                <Package className="text-indigo-600" size={28} />
+                                Shipping Details
+                            </h2>
+
+                            <div className="grid sm:grid-cols-2 gap-4 sm:gap-5">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                                        <User size={16} /> Full Name
+                                    </label>
+                                    <input
+                                        {...register('name')}
+                                        placeholder="John Doe"
+                                        className="w-full p-3 sm:p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all text-base"
+                                    />
+                                    {errors.name && <p className="text-red-500 text-xs mt-1 ml-1 font-semibold">{errors.name.message}</p>}
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                                        <Phone size={16} /> Mobile Number
+                                    </label>
+                                    <input
+                                        {...register('phone')}
+                                        placeholder="9876543210"
+                                        className="w-full p-3 sm:p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all text-base"
+                                        type="tel"
+                                        maxLength={10}
+                                    />
+                                    {errors.phone && <p className="text-red-500 text-xs mt-1 ml-1 font-semibold">{errors.phone.message}</p>}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">PIN Code</label>
+                                <div className="relative">
+                                    <input
+                                        {...register('pincode')}
+                                        onChange={handlePincodeChange}
+                                        placeholder="400001"
+                                        maxLength={6}
+                                        className="w-full p-3 sm:p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all text-base pr-12"
+                                    />
+                                    {loadingPincode && (
+                                        <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-indigo-600" size={20} />
+                                    )}
+                                </div>
+                                {errors.pincode && <p className="text-red-500 text-xs mt-1 font-semibold">{errors.pincode.message}</p>}
+                                <p className="text-xs text-gray-500 mt-1">City and State will be auto-filled</p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 sm:gap-5">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">City</label>
+                                    <input {...register('city')} placeholder="Mumbai" className="w-full p-3 sm:p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all text-base bg-gray-50" readOnly />
+                                    {errors.city && <p className="text-red-500 text-xs mt-1 font-semibold">{errors.city.message}</p>}
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">State</label>
+                                    <input {...register('state')} placeholder="Maharashtra" className="w-full p-3 sm:p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all text-base bg-gray-50" readOnly />
+                                    {errors.state && <p className="text-red-500 text-xs mt-1 font-semibold">{errors.state.message}</p>}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                                    <MapPin size={16} /> Complete Address
+                                </label>
+                                <textarea
+                                    {...register('address')}
+                                    placeholder="House No, Street, Landmark"
+                                    rows="3"
+                                    className="w-full p-3 sm:p-4 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all resize-none text-base"
+                                />
+                                {errors.address && <p className="text-red-500 text-xs mt-1 ml-1 font-semibold">{errors.address.message}</p>}
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 sm:py-5 rounded-2xl font-bold text-lg sm:text-xl hover:from-indigo-700 hover:to-purple-700 shadow-xl hover:shadow-2xl transition-all mt-6"
+                            >
+                                Proceed to Payment →
+                            </button>
+                        </form>
+                    </motion.div>
+                )}
+
+                {step === 2 && (
+                    <motion.div
+                        key="step2"
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -20 }}
+                    >
+                        <button
+                            onClick={() => setStep(1)}
+                            className="text-sm text-indigo-600 mb-6 hover:text-indigo-800 flex items-center gap-1 font-semibold"
+                        >
+                            ← Back to Details
+                        </button>
+                        <PaymentGateway
+                            orderId={orderData?.orderId || "TEST"}
+                            amount={600}
+                            orderData={orderData}
+                            pricing={pricing}
+                            onPaymentComplete={handlePaymentComplete}
+                        />
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
+
+
+
+================================================================================
+FILE: src\components\OrderLookup.jsx
+================================================================================
+
+'use client';
+
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Search, Package, CheckCircle, Clock, XCircle, RefreshCw, Download } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { generateClientInvoice } from '@/lib/clientInvoice';
+
+export default function OrderLookup() {
+    const [orderId, setOrderId] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [orderData, setOrderData] = useState(null);
+    const [pollingInterval, setPollingInterval] = useState(null);
+
+    // Auto-check effect
+    useEffect(() => {
+        return () => {
+            if (pollingInterval) clearInterval(pollingInterval);
+        };
+    }, [pollingInterval]);
+
+    const startPolling = (id) => {
+        if (pollingInterval) clearInterval(pollingInterval);
+
+        const interval = setInterval(() => {
+            checkStatus(id, true);
+        }, 10000); // 10 seconds
+
+        setPollingInterval(interval);
+    };
+
+    const stopPolling = () => {
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+            setPollingInterval(null);
+        }
+    };
+
+    const checkStatus = async (id, isAuto = false) => {
+        try {
+            const response = await fetch(`/api/order/status?orderId=${id}`);
+            const data = await response.json();
+
+            if (response.ok && data.order) {
+                setOrderData(data.order);
+
+                // If verified/paid, stop polling and show success toast (only once)
+                if (data.order.paymentStatus === 'verified' || data.order.status === 'paid') {
+                    if (isAuto) toast.success('Payment Verified! ✅');
+                    stopPolling();
+                }
+            } else if (!isAuto) {
+                toast.error('Order not found');
+                setOrderData(null);
+            }
+        } catch (error) {
+            console.error('Status check failed:', error);
+            if (!isAuto) toast.error('Failed to check status');
+        }
+    };
+
+    const handleLookup = async (e) => {
+        e.preventDefault();
+
+        if (!orderId.trim()) {
+            toast.error('Please enter an Order ID');
+            return;
+        }
+
+        setLoading(true);
+        // Clear previous state
+        stopPolling();
+        setOrderData(null);
+
+        await checkStatus(orderId.trim());
+
+        // Start polling if order found and pending
+        startPolling(orderId.trim());
+
+        setLoading(false);
+    };
+
+    const handleDownloadInvoice = async () => {
+        if (!orderData) return;
+
+        try {
+            await generateClientInvoice(orderData);
+            toast.success('Invoice downloaded successfully!');
+        } catch (error) {
+            console.error('Invoice error:', error);
+            toast.error('Failed to generate invoice');
+        }
+    };
+
+    const getStatusIcon = (status, paymentStatus) => {
+        if (paymentStatus === 'verified' || status === 'paid') {
+            return <CheckCircle className="text-green-500" size={32} />;
+        }
+        if (paymentStatus === 'failed') {
+            return <XCircle className="text-red-500" size={32} />;
+        }
+        return <Clock className="text-yellow-500" size={32} />;
+    };
+
+    return (
+        <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-xl border-2 border-indigo-100 max-w-2xl mx-auto">
+            <div className="text-center mb-6 sm:mb-8">
+                <Package className="mx-auto mb-4 text-indigo-600" size={40} />
+                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Check Order Status</h2>
+                <p className="text-gray-600 text-sm sm:text-base px-4">Enter your Order ID to check real-time status</p>
+            </div>
+
+            <form onSubmit={handleLookup} className="mb-6 sm:mb-8">
+                <div className="flex flex-col sm:flex-row gap-3">
+                    <input
+                        type="text"
+                        value={orderId}
+                        onChange={(e) => setOrderId(e.target.value.toUpperCase())}
+                        placeholder="ELITE-XXXXXX"
+                        className="flex-1 px-4 sm:px-6 py-3 sm:py-4 border-2 border-gray-300 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all text-base sm:text-lg font-mono uppercase"
+                    />
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-2xl font-bold hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 shadow-lg flex items-center justify-center gap-2 text-base sm:text-lg"
+                    >
+                        <Search size={20} />
+                        {loading ? 'Searching...' : 'Check Status'}
+                    </button>
+                </div>
+            </form>
+
+            {orderData && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`p-4 sm:p-6 rounded-2xl border-2 ${orderData.paymentStatus === 'verified' || orderData.status === 'paid'
+                            ? 'border-green-200 bg-green-50'
+                            : orderData.paymentStatus === 'failed'
+                                ? 'border-red-200 bg-red-50'
+                                : 'border-yellow-200 bg-yellow-50'
+                        }`}
+                >
+                    <div className="flex items-start gap-4 mb-6">
+                        {getStatusIcon(orderData.status, orderData.paymentStatus)}
+                        <div className="flex-1">
+                            <h3 className="text-xl font-bold text-gray-900 mb-1">
+                                Order #{orderData.orderId}
+                            </h3>
+                            <div className="flex items-center gap-2">
+                                <span className={`font-semibold ${orderData.paymentStatus === 'verified' || orderData.status === 'paid' ? 'text-green-600' : 'text-yellow-600'
+                                    }`}>
+                                    {orderData.paymentStatus === 'verified' || orderData.status === 'paid'
+                                        ? 'Payment Verified ✅'
+                                        : 'Verification Pending ⏳'}
+                                </span>
+                                {pollingInterval && (
+                                    <span className="flex items-center gap-1 text-xs text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full animate-pulse">
+                                        <RefreshCw size={12} className="animate-spin" />
+                                        Updating...
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="space-y-3 text-sm border-t border-b border-gray-200 py-4 my-4">
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">Customer:</span>
+                            <span className="font-semibold">{orderData.customerName}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">Amount:</span>
+                            <span className="font-semibold">₹{orderData.pricing?.finalPrice}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-600">Date:</span>
+                            <span className="font-semibold">
+                                {new Date(orderData.createdAt).toLocaleDateString()}
+                            </span>
+                        </div>
+                    </div>
+
+                    {(orderData.paymentStatus === 'verified' || orderData.status === 'paid') ? (
+                        <div className="mt-4">
+                            <button
+                                onClick={handleDownloadInvoice}
+                                className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition-all flex items-center justify-center gap-2 shadow-lg"
+                            >
+                                <Download size={20} />
+                                Download Invoice
+                            </button>
+                            <p className="text-center text-xs text-green-700 mt-2">
+                                ✅ Your order is confirmed and will be shipped soon.
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="mt-4 text-center">
+                            <p className="text-sm text-yellow-800 font-medium mb-2">
+                                We are verifying your payment...
+                            </p>
+                            <p className="text-xs text-gray-500">
+                                This page refreshes automatically every 10 seconds.
+                            </p>
+                        </div>
+                    )}
+                </motion.div>
+            )}
+        </div>
+    );
+}
+
+
+
+================================================================================
+FILE: src\components\PaymentGateway.jsx
+================================================================================
+
+'use client';
+
+import { useState, useEffect } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
+import { Copy, Check, Smartphone, Info, AlertCircle, Monitor, Download, CheckCircle, Package, RefreshCw } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
+import { generateClientInvoice } from '@/lib/clientInvoice';
+
+export default function PaymentGateway({ orderId, amount = 600, orderData, pricing, onPaymentComplete }) {
+    const [copied, setCopied] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+    const [paymentCompleted, setPaymentCompleted] = useState(false);
+    const [checkingStatus, setCheckingStatus] = useState(false);
+    const [countdown, setCountdown] = useState(60); // 60 second timer
+    const [showButton, setShowButton] = useState(false);
+    const [paymentStatus, setPaymentStatus] = useState('pending'); // pending, verified, failed
+    const [pollingInterval, setPollingInterval] = useState(null);
+
+    // Get QR code data from orderData
+    const qrCodeImage = orderData?.qrCode?.imageUrl;
+    const upiId = orderData?.qrCode?.upiId || 'riya4862@airtel';
+    const upiLink = orderData?.qrCode?.data || `upi://pay?pa=${upiId}&pn=EliteMarts&am=${amount}&cu=INR&tn=Order ${orderId}`;
+
+    // Countdown timer effect
+    useEffect(() => {
+        if (countdown > 0 && !showButton) {
+            const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+            return () => clearTimeout(timer);
+        } else if (countdown === 0) {
+            setShowButton(true);
+        }
+    }, [countdown, showButton]);
+
+    // Poll payment status every 5 seconds
+    useEffect(() => {
+        if (!orderId || paymentCompleted) return;
+
+        const checkPaymentStatus = async () => {
+            try {
+                const response = await fetch(`/api/order/status?orderId=${orderId}`);
+                const data = await response.json();
+
+                if (data.order) {
+                    const status = data.order.paymentStatus || 'pending';
+                    setPaymentStatus(status);
+
+                    if (status === 'verified') {
+                        setPaymentCompleted(true);
+                        localStorage.setItem(`payment_${orderId}`, 'completed');
+                        if (onPaymentComplete) {
+                            onPaymentComplete(orderId);
+                        }
+                        // Clear polling
+                        if (pollingInterval) {
+                            clearInterval(pollingInterval);
+                        }
+                    } else if (status === 'failed') {
+                        // Payment was rejected
+                        if (pollingInterval) {
+                            clearInterval(pollingInterval);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to check payment status:', error);
+            }
+        };
+
+        // Initial check
+        checkPaymentStatus();
+
+        // Set up polling every 10 seconds (as requested)
+        const interval = setInterval(checkPaymentStatus, 10000);
+        setPollingInterval(interval);
+
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [orderId, paymentCompleted, onPaymentComplete]);
+
+    useEffect(() => {
+        // Detect if device is mobile
+        const checkMobile = () => {
+            const userAgent = navigator.userAgent.toLowerCase();
+            const mobileKeywords = ['android', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone'];
+            return mobileKeywords.some(keyword => userAgent.includes(keyword)) || window.innerWidth < 768;
+        };
+
+        setIsMobile(checkMobile());
+
+        // Check if payment was already completed for this order
+        if (orderId) {
+            const savedPaymentStatus = localStorage.getItem(`payment_${orderId}`);
+            if (savedPaymentStatus === 'completed') {
+                setPaymentCompleted(true);
+                setPaymentStatus('verified');
+            }
+        }
+    }, [orderId]);
+
+    const copyToClipboard = () => {
+        navigator.clipboard.writeText(upiId);
+        setCopied(true);
+        toast.success('UPI ID copied to clipboard!');
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleUPIPayment = () => {
+        if (isMobile) {
+            // On mobile, try to open UPI app
+            window.location.href = upiLink;
+        } else {
+            // On desktop, show instruction
+            toast('Please scan the QR code above with your phone', {
+                icon: '📱',
+                duration: 4000,
+            });
+        }
+    };
+
+    const handlePaymentComplete = async () => {
+        setCheckingStatus(true);
+        try {
+            // Update payment status to pending verification
+            const response = await fetch('/api/order/status', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    orderId: orderId,
+                    paymentStatus: 'pending'
+                })
+            });
+
+            if (response.ok) {
+                toast.success('Payment submitted! Waiting for verification... ⏳', {
+                    duration: 4000
+                });
+                // Start showing "waiting for verification" state
+                setPaymentStatus('pending');
+            } else {
+                toast.error('Failed to update payment status');
+            }
+        } catch (error) {
+            console.error('Payment status update failed:', error);
+            toast.error('Failed to update payment status');
+        } finally {
+            setCheckingStatus(false);
+        }
+    };
+
+    const handleRetryPayment = () => {
+        // Reset states for retry
+        setPaymentStatus('pending');
+        setCountdown(60);
+        setShowButton(false);
+        toast.info('Please complete the payment again');
+    };
+
+    const handleDownloadInvoice = async () => {
+        if (!paymentCompleted) {
+            toast.error('Please complete payment first to download invoice');
+            return;
+        }
+
+        try {
+            if (!orderData) {
+                toast.error('Order data not available');
+                return;
+            }
+
+            const invoiceData = {
+                ...orderData,
+                pricing: pricing || { finalPrice: 1199, prepaidAmount: 600, balanceDue: 599 }
+            };
+
+            await generateClientInvoice(invoiceData);
+            toast.success('Invoice downloaded successfully! 📄');
+        } catch (error) {
+            console.error('Invoice download failed:', error);
+            toast.error('Failed to download invoice');
+        }
+    };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center"
+        >
+            {/* Payment Status Header */}
+            <div className={`text-white p-4 sm:p-6 rounded-2xl mb-6 sm:mb-8 ${paymentCompleted ? 'bg-gradient-to-br from-green-600 to-emerald-600' : 'bg-gradient-to-br from-indigo-600 to-purple-600'}`}>
+                <h2 className="text-2xl sm:text-3xl font-bold mb-2">
+                    {paymentCompleted ? 'Payment Complete! 🎉' : 'Pay Booking Fee'}
+                </h2>
+                <p className="text-4xl sm:text-5xl font-black mb-2">₹{amount}</p>
+                <p className={`${paymentCompleted ? 'text-green-100' : 'text-indigo-100'} text-sm sm:text-base`}>
+                    Order ID: <span className="font-mono font-bold">{orderId}</span>
+                </p>
+                {paymentCompleted && (
+                    <div className="mt-3 flex items-center justify-center gap-2">
+                        <CheckCircle size={24} className="text-green-200" />
+                        <span className="text-green-200 font-semibold">Payment Verified</span>
+                    </div>
+                )}
+            </div>
+
+            {!paymentCompleted ? (
+                <>
+                    {/* Important Notice */}
+                    <div className="bg-orange-50 border-2 border-orange-300 rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8 text-left">
+                        <div className="flex gap-3 sm:gap-4">
+                            <AlertCircle className="text-orange-600 shrink-0 mt-1" size={24} />
+                            <div className="text-sm sm:text-base text-orange-900">
+                                <p className="font-bold mb-2 text-base sm:text-lg">⚡ IMPORTANT - How Payment Works:</p>
+                                <ul className="space-y-2 text-orange-800">
+                                    <li className="flex items-start gap-2">
+                                        <span className="font-bold shrink-0">1.</span>
+                                        <span>Scan QR code or pay via UPI app using ID: <span className="font-mono font-bold">{upiId}</span></span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="font-bold shrink-0">2.</span>
+                                        <span>Payment goes directly to our bank account (100% working!)</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="font-bold shrink-0">3.</span>
+                                        <span>Save your Order ID: <span className="font-mono font-bold">{orderId}</span></span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="font-bold shrink-0">4.</span>
+                                        <span>After payment, click "I've Completed Payment" button below</span>
+                                    </li>
+                                    <li className="flex items-start gap-2">
+                                        <span className="font-bold shrink-0">5.</span>
+                                        <span>You'll be redirected back and can download your invoice</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* QR Code Section */}
+                    <div className="bg-white p-4 sm:p-8 rounded-3xl border-2 border-indigo-100 shadow-xl mb-6 sm:mb-8">
+                        <p className="text-gray-600 mb-4 sm:mb-6 font-medium text-sm sm:text-base">
+                            {isMobile ? 'Scan QR code or use button below' : 'Scan QR code with your phone'}
+                        </p>
+
+                        <div className="bg-white p-3 sm:p-4 inline-block rounded-2xl border-4 border-indigo-600 mb-4 sm:mb-6 shadow-lg">
+                            {qrCodeImage ? (
+                                <img
+                                    src={qrCodeImage}
+                                    alt="UPI Payment QR Code"
+                                    className="w-[180px] h-[180px] sm:w-[220px] sm:h-[220px]"
+                                />
+                            ) : (
+                                <div className="w-[180px] h-[180px] sm:w-[220px] sm:h-[220px] flex items-center justify-center bg-gray-100 rounded">
+                                    <p className="text-gray-500 text-sm text-center px-4">QR Code Loading...</p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="space-y-4 sm:space-y-5">
+                            <div>
+                                <p className="text-sm text-gray-600 mb-2 font-semibold">Or pay manually to UPI ID:</p>
+                                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                                    <code className="bg-indigo-50 px-4 sm:px-6 py-3 rounded-xl border-2 border-indigo-200 font-mono text-base sm:text-lg font-bold text-indigo-700 break-all">
+                                        {upiId}
+                                    </code>
+                                    <button
+                                        onClick={copyToClipboard}
+                                        className="w-full sm:w-auto p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-lg flex items-center justify-center gap-2"
+                                        title="Copy UPI ID"
+                                    >
+                                        {copied ? <><Check size={20} /> Copied!</> : <><Copy size={20} /> Copy</>}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="relative my-4 sm:my-6">
+                                <div className="absolute inset-0 flex items-center">
+                                    <span className="w-full border-t-2 border-gray-200" />
+                                </div>
+                                <div className="relative flex justify-center text-xs sm:text-sm uppercase">
+                                    <span className="bg-white px-4 text-gray-500 font-bold">Quick Pay</span>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleUPIPayment}
+                                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 sm:py-4 rounded-2xl flex items-center justify-center gap-3 hover:from-indigo-700 hover:to-purple-700 transition-all font-bold text-base sm:text-lg shadow-xl hover:shadow-2xl"
+                            >
+                                {isMobile ? (
+                                    <>
+                                        <Smartphone size={24} />
+                                        Open UPI App
+                                    </>
+                                ) : (
+                                    <>
+                                        <Monitor size={24} />
+                                        Scan QR with Phone
+                                    </>
+                                )}
+                            </button>
+
+                            {!isMobile && (
+                                <p className="text-xs text-gray-500 mt-2">
+                                    💡 UPI apps only work on mobile. Please scan the QR code with your phone.
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Payment Complete Button - Show Only After Timer */}
+                    {paymentStatus === 'pending' && !paymentCompleted && (
+                        <div className="bg-green-50 border-2 border-green-300 rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8">
+                            {!showButton ? (
+                                <div className="text-center">
+                                    <div className="mb-4">
+                                        <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full mb-3">
+                                            <span className="text-3xl font-bold text-white">{countdown}</span>
+                                        </div>
+                                    </div>
+                                    <p className="text-gray-700 font-semibold mb-2">
+                                        ⏱️ Please complete your payment
+                                    </p>
+                                    <p className="text-sm text-gray-600">
+                                        Button will appear in <span className="font-bold text-indigo-600">{countdown} seconds</span>
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-2">
+                                        This ensures you have time to complete the payment
+                                    </p>
+                                </div>
+                            ) : (
+                                <>
+                                    <button
+                                        onClick={handlePaymentComplete}
+                                        disabled={checkingStatus}
+                                        className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 sm:py-4 rounded-2xl flex items-center justify-center gap-3 hover:from-green-700 hover:to-emerald-700 transition-all font-bold text-base sm:text-lg shadow-xl hover:shadow-2xl disabled:opacity-50"
+                                    >
+                                        {checkingStatus ? (
+                                            <>
+                                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                                                Submitting...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <CheckCircle size={24} />
+                                                I've Completed Payment
+                                            </>
+                                        )}
+                                    </button>
+                                    <p className="text-xs text-green-700 mt-2 text-center">
+                                        ✅ Click this after making the ₹{amount} payment
+                                    </p>
+
+
+                                    {/* Manual Check Status Button */}
+                                    <div className="mt-3 pt-3 border-t border-green-200">
+                                        <button
+                                            onClick={async () => {
+                                                setCheckingStatus(true);
+                                                try {
+                                                    console.log('🔍 Checking status for orderId:', orderId);
+                                                    const response = await fetch(`/api/order/status?orderId=${orderId}`);
+                                                    console.log('📡 Response status:', response.status);
+
+                                                    const data = await response.json();
+                                                    console.log('📦 Response data:', data);
+
+                                                    if (!response.ok) {
+                                                        throw new Error(data.error || 'Failed to fetch order');
+                                                    }
+
+                                                    if (data.success && data.order) {
+                                                        const status = data.order.paymentStatus || data.order.status || 'pending';
+                                                        console.log('✅ Payment status:', status);
+                                                        setPaymentStatus(status);
+
+                                                        if (status === 'verified' || data.order.status === 'paid') {
+                                                            toast.success('Payment verified! 🎉');
+                                                            setPaymentCompleted(true);
+                                                        } else if (status === 'failed') {
+                                                            toast.error('Payment failed');
+                                                        } else {
+                                                            toast.info('Payment still pending verification');
+                                                        }
+                                                    } else {
+                                                        console.error('❌ No order data:', data);
+                                                        toast.error(data.error || 'Order not found');
+                                                    }
+                                                } catch (error) {
+                                                    console.error('❌ Status check error:', error);
+                                                    toast.error(`Failed: ${error.message}`);
+                                                } finally {
+                                                    setCheckingStatus(false);
+                                                }
+                                            }}
+                                            className="w-full bg-white text-green-700 border-2 border-green-600 py-2 rounded-xl flex items-center justify-center gap-2 hover:bg-green-50 transition-all font-semibold text-sm"
+                                        >
+                                            <RefreshCw size={18} />
+                                            Check Payment Status
+                                        </button>
+                                        <p className="text-xs text-gray-600 mt-1 text-center">
+                                            Auto-checks every 10 seconds
+                                        </p>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Waiting for Verification State */}
+                    {paymentStatus === 'pending' && checkingStatus && (
+                        <div className="bg-yellow-50 border-2 border-yellow-300 rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8">
+                            <div className="text-center">
+                                <div className="animate-pulse mb-3">
+                                    <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-full">
+                                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                                    </div>
+                                </div>
+                                <h3 className="text-xl font-bold text-yellow-800 mb-2">Verifying Payment... ⏳</h3>
+                                <p className="text-yellow-700 text-sm">
+                                    We're checking if your payment of ₹{amount} was received.
+                                </p>
+                                <p className="text-yellow-600 text-xs mt-2">
+                                    This usually takes a few seconds. Please wait...
+                                </p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Payment Failed State */}
+                    {paymentStatus === 'failed' && (
+                        <div className="bg-red-50 border-2 border-red-300 rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8">
+                            <div className="text-center">
+                                <AlertCircle size={48} className="text-red-600 mx-auto mb-3" />
+                                <h3 className="text-xl font-bold text-red-800 mb-2">Payment Failed ❌</h3>
+                                <p className="text-red-700 mb-4">
+                                    We couldn't verify your ₹{amount} payment. Please try again.
+                                </p>
+                                <button
+                                    onClick={handleRetryPayment}
+                                    className="w-full bg-gradient-to-r from-red-600 to-rose-600 text-white py-3 sm:py-4 rounded-2xl flex items-center justify-center gap-3 hover:from-red-700 hover:to-rose-700 transition-all font-bold text-base sm:text-lg shadow-xl hover:shadow-2xl"
+                                >
+                                    <Package size={24} />
+                                    Pay Again
+                                </button>
+                                <p className="text-xs text-red-600 mt-2">
+                                    Make sure to pay exactly ₹{amount} to the UPI ID above
+                                </p>
+                            </div>
+                        </div>
+                    )}
+                </>
+            ) : (
+                <>
+                    {/* Payment Completed - Show Invoice Download */}
+                    <div className="bg-green-50 border-2 border-green-200 rounded-2xl p-4 sm:p-6 mb-6 sm:mb-8">
+                        <div className="text-center mb-4">
+                            <CheckCircle size={48} className="text-green-600 mx-auto mb-3" />
+                            <h3 className="text-xl font-bold text-green-800 mb-2">Payment Verified! ✅</h3>
+                            <p className="text-green-700">Your payment of ₹{amount} has been confirmed. Download your invoice below.</p>
+                        </div>
+
+                        <button
+                            onClick={handleDownloadInvoice}
+                            className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 sm:py-4 rounded-2xl flex items-center justify-center gap-3 hover:from-green-700 hover:to-emerald-700 transition-all font-bold text-base sm:text-lg shadow-xl hover:shadow-2xl"
+                        >
+                            <Download size={24} />
+                            Download Invoice (PDF)
+                        </button>
+                        <p className="text-xs text-green-700 mt-2 text-center">
+                            📄 PDF will be saved directly to your device
+                        </p>
+                    </div>
+                </>
+            )}
+
+            {/* After Payment Instructions */}
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-2xl p-4 sm:p-6 text-left">
+                <div className="flex gap-3 sm:gap-4">
+                    <Info className="text-blue-600 shrink-0 mt-1" size={24} />
+                    <div className="text-sm sm:text-base text-blue-900">
+                        <p className="font-bold mb-2 text-base sm:text-lg">✅ After Payment:</p>
+                        <ul className="space-y-2 text-blue-800">
+                            <li className="flex items-start gap-2">
+                                <span>•</span>
+                                <span>Your Order ID is: <span className="font-mono font-bold bg-blue-100 px-2 py-1 rounded">{orderId}</span></span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <span>•</span>
+                                <span>Click "I've Completed Payment" to update your status</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <span>•</span>
+                                <span>You'll be redirected back to download your invoice</span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <span>•</span>
+                                <span>Check status anytime using "Check Order Status" section below</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </motion.div>
+    );
+}
+
+
+
+================================================================================
+FILE: src\components\PricingCard.jsx
+================================================================================
+
+'use client';
+
+import { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Tag, Check, Sparkles } from 'lucide-react';
+import confetti from 'canvas-confetti';
+
+export default function PricingCard({ onPriceChange }) {
+    const [couponApplied, setCouponApplied] = useState(true);
+
+    const originalPrice = 2999;
+    const discountedPrice = 1199;
+    const prepaidAmount = 600;
+
+    const finalPrice = couponApplied ? discountedPrice : originalPrice;
+    const balanceDue = finalPrice - prepaidAmount;
+
+    useEffect(() => {
+        if (onPriceChange) {
+            onPriceChange({
+                finalPrice,
+                couponApplied,
+                balanceDue
+            });
+        }
+    }, [couponApplied, finalPrice, balanceDue, onPriceChange]);
+
+    const handleCouponToggle = () => {
+        const newState = !couponApplied;
+        setCouponApplied(newState);
+
+        // Celebration animation when coupon is applied
+        if (newState) {
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: ['#10b981', '#34d399', '#6ee7b7']
+            });
+        }
+    };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="bg-gradient-to-br from-indigo-50 to-purple-50 p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-xl border-2 border-indigo-100 max-w-md mx-auto"
+        >
+            <div className="flex items-center justify-between mb-6 sm:mb-8">
+                <h3 className="text-xl sm:text-2xl font-bold text-gray-900">Pricing</h3>
+                <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 sm:px-4 py-1 sm:py-2 rounded-full text-xs sm:text-sm font-bold flex items-center gap-2 shadow-lg">
+                    <Sparkles size={14} /> 60% OFF
+                </div>
+            </div>
+
+            {/* Coupon Toggle */}
+            <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className={`p-4 sm:p-5 rounded-2xl border-2 cursor-pointer transition-all mb-6 sm:mb-8 ${couponApplied
+                        ? 'border-green-500 bg-green-50 shadow-lg shadow-green-100'
+                        : 'border-gray-300 bg-white hover:border-indigo-300'
+                    }`}
+                onClick={handleCouponToggle}
+            >
+                <div className="flex items-center gap-3 sm:gap-4">
+                    <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-lg border-2 flex items-center justify-center transition-all ${couponApplied ? 'bg-green-500 border-green-500' : 'bg-white border-gray-400'
+                        }`}>
+                        {couponApplied && <Check size={16} className="text-white font-bold" />}
+                    </div>
+                    <div className="flex-1">
+                        <p className="font-bold text-gray-900 text-base sm:text-lg">Apply ELITE Coupon</p>
+                        <p className="text-xs sm:text-sm text-gray-600">Save ₹1,800 instantly!</p>
+                    </div>
+                    <Tag className="text-green-600" size={20} />
+                </div>
+            </motion.div>
+
+            <div className="space-y-3 sm:space-y-4 text-base sm:text-lg">
+                <div className="flex justify-between items-center text-gray-500">
+                    <span className="text-sm sm:text-base">Original Price:</span>
+                    <span className="line-through font-semibold">₹{originalPrice}</span>
+                </div>
+
+                {couponApplied && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="flex justify-between items-center text-green-600 font-bold bg-green-50 p-2 sm:p-3 rounded-xl"
+                    >
+                        <span className="text-sm sm:text-base">Discount:</span>
+                        <span>- ₹{originalPrice - discountedPrice}</span>
+                    </motion.div>
+                )}
+
+                <div className="h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent my-3 sm:my-4"></div>
+
+                <div className="flex justify-between items-center text-xl sm:text-2xl font-black text-gray-900">
+                    <span>Final Price:</span>
+                    <span className="text-indigo-600">₹{finalPrice}</span>
+                </div>
+
+                <div className="bg-gradient-to-br from-indigo-600 to-purple-600 p-4 sm:p-6 rounded-2xl mt-4 sm:mt-6 space-y-2 sm:space-y-3 text-white shadow-xl">
+                    <div className="flex justify-between items-center font-bold text-lg sm:text-xl">
+                        <span>Pay Now:</span>
+                        <span>₹{prepaidAmount}</span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-indigo-100">
+                        Balance ₹{balanceDue} payable on delivery
+                    </p>
+                </div>
+            </div>
+        </motion.div>
+    );
+}
+
+
+
+================================================================================
+FILE: src\components\ProductShowcase.jsx
+================================================================================
+
+'use client';
+
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import Image from 'next/image';
+import { Dialog } from '@headlessui/react';
+import { X, ZoomIn } from 'lucide-react';
+
+const productImages = [
+    { src: '/product1.jpg', alt: 'Neck Massager in Use' },
+    { src: '/product2.jpg', alt: 'Product Features' },
+    { src: '/product3.jpg', alt: 'Product Design' },
+    { src: '/product4.jpg', alt: 'Product Details' },
+    { src: '/product-desc.jpg', alt: 'Product Specifications' }
+];
+
+const features = [
+    {
+        icon: '🤲',
+        title: "Simulated Human Hand",
+        desc: "Designed to mimic professional massage techniques with precision."
+    },
+    {
+        icon: '🔥',
+        title: "Dual Zone Heat",
+        desc: "Soothing heat therapy for neck and shoulders."
+    },
+    {
+        icon: '🔋',
+        title: "Wireless Design",
+        desc: "Rechargeable 2000mAh battery for 2+ hours of use."
+    },
+    {
+        icon: '✨',
+        title: "Premium Leather",
+        desc: "Skin-friendly, durable, and easy to clean materials."
+    }
+];
+
+export default function ProductShowcase() {
+    const [selectedImage, setSelectedImage] = useState(null);
+    const [mainImage, setMainImage] = useState(productImages[0]);
+
+    return (
+        <>
+            <section className="py-20 bg-white">
+                <div className="max-w-7xl mx-auto px-4">
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        whileInView={{ opacity: 1 }}
+                        viewport={{ once: true }}
+                        className="text-center mb-16"
+                    >
+                        <h2 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-6">
+                            Why Choose EliteMarts?
+                        </h2>
+                        <p className="text-gray-600 text-xl max-w-2xl mx-auto">
+                            Experience the next generation of relaxation technology with premium quality and design.
+                        </p>
+                    </motion.div>
+
+                    <div className="grid lg:grid-cols-2 gap-16 items-center mb-20">
+                        {/* Main Image Display */}
+                        <motion.div
+                            initial={{ x: -20, opacity: 0 }}
+                            whileInView={{ x: 0, opacity: 1 }}
+                            viewport={{ once: true }}
+                            className="space-y-4"
+                        >
+                            <div
+                                className="relative rounded-3xl overflow-hidden shadow-2xl h-[400px] md:h-[500px] cursor-pointer group"
+                                onClick={() => setSelectedImage(mainImage)}
+                            >
+                                <Image
+                                    src={mainImage.src}
+                                    alt={mainImage.alt}
+                                    fill
+                                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                                />
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
+                                    <ZoomIn className="text-white opacity-0 group-hover:opacity-100 transition-opacity" size={48} />
+                                </div>
+                            </div>
+
+                            {/* Thumbnail Gallery */}
+                            <div className="grid grid-cols-5 gap-3">
+                                {productImages.map((img, idx) => (
+                                    <motion.div
+                                        key={idx}
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
+                                        onClick={() => setMainImage(img)}
+                                        className={`relative h-20 rounded-xl overflow-hidden cursor-pointer border-2 transition-all ${mainImage.src === img.src
+                                                ? 'border-indigo-600 shadow-lg'
+                                                : 'border-gray-200 hover:border-indigo-300'
+                                            }`}
+                                    >
+                                        <Image
+                                            src={img.src}
+                                            alt={img.alt}
+                                            fill
+                                            className="object-cover"
+                                        />
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </motion.div>
+
+                        {/* Features List */}
+                        <motion.div
+                            initial={{ x: 20, opacity: 0 }}
+                            whileInView={{ x: 0, opacity: 1 }}
+                            viewport={{ once: true }}
+                            className="space-y-8"
+                        >
+                            {features.map((feature, idx) => (
+                                <motion.div
+                                    key={idx}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: true }}
+                                    transition={{ delay: idx * 0.1 }}
+                                    className="flex gap-5 items-start p-6 rounded-2xl hover:bg-indigo-50 transition-colors group"
+                                >
+                                    <div className="text-4xl shrink-0 group-hover:scale-110 transition-transform">
+                                        {feature.icon}
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-bold text-gray-900 mb-2">{feature.title}</h3>
+                                        <p className="text-gray-600 leading-relaxed">{feature.desc}</p>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </motion.div>
+                    </div>
+                </div>
+            </section>
+
+            {/* Image Modal */}
+            <Dialog
+                open={selectedImage !== null}
+                onClose={() => setSelectedImage(null)}
+                className="relative z-50"
+            >
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" aria-hidden="true" />
+
+                <div className="fixed inset-0 flex items-center justify-center p-4">
+                    <Dialog.Panel className="relative max-w-4xl w-full">
+                        <button
+                            onClick={() => setSelectedImage(null)}
+                            className="absolute -top-12 right-0 text-white hover:text-gray-300 transition-colors"
+                        >
+                            <X size={32} />
+                        </button>
+
+                        {selectedImage && (
+                            <div className="relative h-[80vh] rounded-2xl overflow-hidden">
+                                <Image
+                                    src={selectedImage.src}
+                                    alt={selectedImage.alt}
+                                    fill
+                                    className="object-contain"
+                                />
+                            </div>
+                        )}
+                    </Dialog.Panel>
+                </div>
+            </Dialog>
+        </>
+    );
+}
+
+
+
+================================================================================
+FILE: src\lib\clientInvoice.js
+================================================================================
+
+// Professional PDF invoice generation
+
+export async function generateClientInvoice(orderData) {
+    const { jsPDF } = await import('jspdf');
+    const doc = new jsPDF();
+
+    let y = 20;
+
+    // Header with logo-like design
+    doc.setFillColor(0, 123, 255); // Blue background
+    doc.rect(0, 0, 210, 45, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(26);
+    doc.setFont('helvetica', 'bold');
+    doc.text('ELITEMARTS', 20, y + 5);
+
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Premium Health & Wellness Products', 20, y + 15);
+
+    doc.setFontSize(12);
+    doc.text('OFFICIAL INVOICE', 160, y + 15, { align: 'right' });
+
+    y += 50;
+
+    // Invoice Details Box
+    doc.setFillColor(248, 249, 250); // Light gray
+    doc.rect(140, y - 5, 50, 35, 'F');
+    doc.setDrawColor(222, 226, 230);
+    doc.rect(140, y - 5, 50, 35);
+
+    doc.setTextColor(33, 37, 41); // Dark gray
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('INVOICE DETAILS', 145, y + 2);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Invoice No: ${orderData.orderId}`, 145, y + 10);
+    doc.text(`Date: ${new Date().toLocaleDateString('en-IN')}`, 145, y + 17);
+    doc.text(`Time: ${new Date().toLocaleTimeString('en-IN')}`, 145, y + 24);
+
+    // Customer Details Box
+    doc.setFillColor(255, 255, 255);
+    doc.rect(20, y - 5, 110, 35, 'F');
+    doc.setDrawColor(222, 226, 230);
+    doc.rect(20, y - 5, 110, 35);
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('BILL TO / SHIP TO', 25, y + 2);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Name: ${orderData.name || 'Customer'}`, 25, y + 10);
+    doc.text(`Phone: ${orderData.phone || ''}`, 25, y + 17);
+    doc.text(`Address: ${orderData.address || ''}`, 25, y + 24);
+
+    y += 45;
+
+    // Order Summary Section
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(33, 37, 41);
+    doc.text('ORDER SUMMARY', 20, y);
+    y += 10;
+
+    // Product Details
+    doc.setFillColor(248, 249, 250);
+    doc.rect(20, y, 170, 20, 'F');
+    doc.setDrawColor(222, 226, 230);
+    doc.rect(20, y, 170, 20);
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Product:', 25, y + 8);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Robotic Neck & Shoulder Massager', 50, y + 8);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('Quantity:', 25, y + 15);
+    doc.setFont('helvetica', 'normal');
+    doc.text('1 Unit', 50, y + 15);
+
+    y += 25;
+
+    // Pricing Table
+    doc.setFillColor(0, 123, 255);
+    doc.rect(20, y, 170, 12, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DESCRIPTION', 25, y + 8);
+    doc.text('AMOUNT', 165, y + 8);
+
+    y += 12;
+
+    // Subtotal Row
+    doc.setFillColor(255, 255, 255);
+    doc.rect(20, y, 170, 10, 'F');
+    doc.setDrawColor(222, 226, 230);
+    doc.rect(20, y, 170, 10);
+    doc.setTextColor(33, 37, 41);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Subtotal (1 Unit)', 25, y + 7);
+    doc.text('Rs. 1,199.00', 165, y + 7, { align: 'right' });
+
+    y += 10;
+
+    // Discount Row (if applicable)
+    if (orderData.pricing?.couponApplied) {
+        doc.setFillColor(240, 255, 240);
+        doc.rect(20, y, 170, 10, 'F');
+        doc.setDrawColor(222, 226, 230);
+        doc.rect(20, y, 170, 10);
+        doc.setTextColor(0, 128, 0);
+        doc.text('Coupon Discount (ELITEMARTS27)', 25, y + 7);
+        doc.text('-Rs. 400.00', 165, y + 7, { align: 'right' });
+        y += 10;
+    }
+
+    // Total Row
+    doc.setFillColor(0, 123, 255);
+    doc.rect(20, y, 170, 12, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('FINAL TOTAL', 25, y + 8);
+    doc.text(`Rs. ${orderData.pricing?.finalPrice || 1199}.00`, 165, y + 8, { align: 'right' });
+
+    y += 25;
+
+    // Payment Information
+    doc.setTextColor(33, 37, 41);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PAYMENT INFORMATION', 20, y);
+    y += 10;
+
+    // Payment Status Boxes
+    const boxHeight = 15;
+    const boxWidth = 170;
+
+    // Advance Payment
+    doc.setFillColor(40, 167, 69);
+    doc.rect(20, y, boxWidth, boxHeight, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('✓ ADVANCE PAYMENT COMPLETED', 25, y + 10);
+    doc.text('Rs. 600', 180, y + 10, { align: 'right' });
+
+    y += boxHeight + 2;
+
+    // Balance Payment
+    doc.setFillColor(255, 193, 7);
+    doc.rect(20, y, boxWidth, boxHeight, 'F');
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('⏳ BALANCE PAYMENT PENDING', 25, y + 10);
+    doc.text('Rs. 599', 180, y + 10, { align: 'right' });
+
+    y += boxHeight + 15;
+
+    // Delivery Information
+    doc.setTextColor(33, 37, 41);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DELIVERY INFORMATION', 20, y);
+    y += 10;
+
+    doc.setFillColor(248, 249, 250);
+    doc.rect(20, y, 170, 35, 'F');
+    doc.setDrawColor(222, 226, 230);
+    doc.rect(20, y, 170, 35);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(33, 37, 41);
+    doc.text('• Delivery Address: As mentioned above', 25, y + 8);
+    doc.text('• Estimated Delivery: 5-6 business days', 25, y + 15);
+    doc.text('• Delivery Partner: EliteMarts Logistics', 25, y + 22);
+    doc.text('• Tracking: Available after payment verification', 25, y + 29);
+
+    y += 45;
+
+    // Terms & Conditions
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 100, 100);
+    doc.text('TERMS & CONDITIONS:', 20, y);
+    y += 8;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text('• Product will be delivered after full payment verification.', 20, y);
+    y += 5;
+    doc.text('• 6 months warranty on manufacturing defects only.', 20, y);
+    y += 5;
+    doc.text('• Returns accepted within 7 days of delivery (unused products only).', 20, y);
+
+    y += 20;
+
+    // Footer
+    doc.setFillColor(50, 50, 50);
+    doc.rect(0, 270, 210, 20, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Need Help? Contact us:', 20, 277);
+    doc.text('Email: support@elitemarts.com | Phone: +91-XXXXXXXXXX', 20, 283);
+
+    // Thank you message
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Thank you for shopping with EliteMarts!', 105, 250, { align: 'center' });
+    doc.text('Your health is our priority.', 105, 257, { align: 'center' });
+
+    // Save the PDF
+    doc.save(`${orderData.orderId}.pdf`);
+    return true;
+}
+
+
+================================================================================
+FILE: src\lib\database.js
+================================================================================
+
+import { MongoClient } from 'mongodb';
+
+const uri = process.env.MONGODB_URI;
+const options = {};
+
+let client;
+let clientPromise;
+
+if (!process.env.MONGODB_URI) {
+    throw new Error('Please add your Mongo URI to environment variables as MONGODB_URI');
+}
+
+if (process.env.NODE_ENV === 'development') {
+    // In development mode, use a global variable so that the value
+    // is preserved across module reloads caused by HMR (Hot Module Replacement).
+    if (!global._mongoClientPromise) {
+        client = new MongoClient(uri, options);
+        global._mongoClientPromise = client.connect();
+    }
+    clientPromise = global._mongoClientPromise;
+} else {
+    // In production mode, cache the client to avoid connection issues
+    if (!global._mongoClientPromise) {
+        client = new MongoClient(uri, options);
+        global._mongoClientPromise = client.connect();
+    }
+    clientPromise = global._mongoClientPromise;
+}
+
+export default clientPromise;
+
+
+
+================================================================================
+FILE: src\lib\notifications.js
+================================================================================
+
+// This is a placeholder for actual SMS/WhatsApp integration
+// You would need valid API keys for Twilio or TextLocal
+
+export async function sendSMS({ to, message }) {
+    console.log(`[MOCK SMS] To: ${to}, Message: ${message}`);
+    // In production: call Twilio/TextLocal API here
+    return true;
+}
+
+export async function sendWhatsApp({ to, template, parameters }) {
+    console.log(`[MOCK WHATSAPP] To: ${to}, Template: ${template}, Params: ${JSON.stringify(parameters)}`);
+    // In production: call Twilio WhatsApp API here
+    return true;
+}
+
+
+
+================================================================================
+FILE: src\lib\utils.js
+================================================================================
+
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs) {
+  return twMerge(clsx(inputs));
+}
+
+
+
+================================================================================
+FILE: package.json
+================================================================================
+
+{
+  "name": "temp_app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@headlessui/react": "^2.2.9",
+    "@hookform/resolvers": "^5.2.2",
+    "axios": "^1.13.2",
+    "canvas-confetti": "^1.9.4",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.24.0",
+    "jspdf": "^4.0.0",
+    "lucide-react": "^0.562.0",
+    "mongodb": "^7.0.0",
+    "next": "16.1.1",
+    "qrcode": "^1.5.4",
+    "qrcode.react": "^4.2.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-hook-form": "^7.70.0",
+    "react-hot-toast": "^2.6.0",
+    "tailwind-merge": "^3.4.0",
+    "uuid": "^13.0.0",
+    "zod": "^4.3.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.18",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.1",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4"
+  }
+}
+
+
+================================================================================
+FILE: .env.local (TEMPLATE - Add your values)
+================================================================================
+
+MONGODB_URI=your_mongodb_connection_string_here
+UPI_ID=riya4862@airtel
+
