@@ -19,7 +19,18 @@ export async function GET(request) {
             return NextResponse.json({ error: 'Order not found' }, { status: 404 });
         }
 
-        return NextResponse.json({ order });
+        return NextResponse.json({
+            success: true,
+            order: {
+                ...order,
+                // Ensure these fields are explicitly sent
+                paymentStatus: order.paymentStatus || 'pending',
+                verifiedAt: order.paymentVerifiedAt || null,
+                createdAt: order.createdAt
+            },
+            status: order.paymentStatus || 'pending',
+            canDownloadInvoice: order.paymentStatus === 'verified' || order.status === 'paid'
+        });
 
     } catch (error) {
         console.error('Order lookup error:', error);
