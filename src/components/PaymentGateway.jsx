@@ -266,163 +266,121 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
                 <span className="font-semibold text-sm md:text-base text-gray-800">{statusInfo.text}</span>
             </div>
 
-            {/* Payment Options */}
-            <div className="space-y-6">
-                {/* Instamojo Button - Primary */}
-                {instamojoUrl && (
-                    <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-6 border-2 border-green-200">
-                        <p className="text-center font-bold text-gray-800 mb-3">💳 Recommended: Pay Online</p>
-                        <button
-                            onClick={openInstamojo}
-                            className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-xl font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-lg flex items-center justify-center gap-2"
-                        >
-                            <ExternalLink size={20} />
-                            Pay ₹600 via Instamojo
-                        </button>
-                        <p className="text-xs text-center text-gray-600 mt-2">
-                            ✅ Instant verification • All payment methods accepted
-                        </p>
-                    </div>
-                )}
-
-                {/* UPI App Buttons */}
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border-2 border-blue-200">
-                    <p className="text-center font-bold text-gray-800 mb-3">
-                        <Smartphone className="inline mr-2" size={20} />
-                        Or Pay with UPI App
-                    </p>
-                    <div className="grid grid-cols-2 gap-3 mb-4">
-                        <button
-                            onClick={() => openUPIApp('phonepe')}
-                            className="bg-purple-600 text-white py-3 rounded-xl font-semibold hover:bg-purple-700 transition-colors"
-                        >
-                            PhonePe
-                        </button>
-                        <button
-                            onClick={() => openUPIApp('gpay')}
-                            className="bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition-colors"
-                        >
-                            Google Pay
-                        </button>
-                        <button
-                            onClick={() => openUPIApp('paytm')}
-                            className="bg-cyan-600 text-white py-3 rounded-xl font-semibold hover:bg-cyan-700 transition-colors"
-                        >
-                            Paytm
-                        </button>
-                        <button
-                            onClick={() => openUPIApp('any')}
-                            className="bg-gray-700 text-white py-3 rounded-xl font-semibold hover:bg-gray-800 transition-colors"
-                        >
-                            Any UPI App
-                        </button>
-                    </div>
-                </div>
-
-                {/* QR Code Section */}
-                <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-3xl p-6 md:p-8">
-                    <p className="text-center text-gray-700 font-semibold mb-4 text-sm md:text-base">
-                        📱 Or Scan QR Code
-                    </p>
-
-                    {/* QR Code - Centered */}
-                    <div className="flex justify-center mb-6">
-                        <div className="bg-white p-4 md:p-6 rounded-2xl border-4 border-indigo-600 shadow-xl">
-                            {qrCodeImage ? (
-                                <img src={qrCodeImage} alt="Payment QR" className="w-48 h-48 md:w-64 md:h-64" />
-                            ) : (
-                                <QRCodeSVG
-                                    value={upiLink}
-                                    size={typeof window !== 'undefined' && window.innerWidth < 768 ? 192 : 256}
-                                />
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Divider */}
-                    <div className="relative my-6">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t-2 border-gray-300"></div>
-                        </div>
-                        <div className="relative flex justify-center">
-                            <span className="bg-gradient-to-br from-indigo-50 to-purple-50 px-4 text-sm font-bold text-gray-600">OR</span>
-                        </div>
-                    </div>
-
-                    {/* UPI ID */}
-                    <div>
-                        <p className="text-sm font-bold text-gray-700 text-center mb-3">Pay to UPI ID:</p>
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                            <code className="bg-white px-4 md:px-6 py-3 rounded-xl border-2 border-indigo-200 font-mono text-base md:text-lg font-bold text-indigo-700 break-all text-center">
-                                {upiId}
-                            </code>
-                            <button
-                                onClick={copyToClipboard}
-                                className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-md"
-                                title="Copy UPI ID"
-                            >
-                                {copied ? <Check size={20} /> : <Copy size={20} />}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="space-y-3 mt-6">
-                {/* I've Completed Payment Button */}
+            {/* Pay Now Button - Primary */}
+            {instamojoUrl && (
                 <button
-                    onClick={handlePaymentComplete}
-                    disabled={checkingStatus || paymentState === 'verified' || !showButton}
-                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-2xl font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    onClick={openInstamojo}
+                    className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-5 rounded-2xl font-bold text-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-xl flex items-center justify-center gap-3 mb-6"
                 >
-                    {checkingStatus ? (
-                        <>
-                            <RefreshCw className="animate-spin" size={20} />
-                            Submitting...
-                        </>
-                    ) : paymentState === 'verified' ? (
-                        <>
-                            <CheckCircle size={20} />
-                            Payment Verified!
-                        </>
-                    ) : (
-                        <>
-                            <CheckCircle size={20} />
-                            I've Completed Payment
-                        </>
-                    )}
+                    <ExternalLink size={24} />
+                    Pay Now ₹600
                 </button>
+            )}
 
-                {!showButton && (
-                    <p className="text-sm text-center text-gray-600">
-                        Button appears in <span className="font-bold text-indigo-600">{countdown}s</span>
-                    </p>
-                )}
-
-                {/* Manual Check Button */}
-                <button
-                    onClick={handleManualCheck}
-                    disabled={checkingStatus}
-                    className="w-full bg-white text-indigo-700 border-2 border-indigo-600 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
-                >
-                    <RefreshCw size={18} className={checkingStatus ? 'animate-spin' : ''} />
-                    Check Payment Status
-                </button>
-            </div>
-
-            {/* Info Box */}
-            <div className="mt-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
-                <p className="text-sm text-blue-800 text-center">
-                    ⚡ Auto-checking every 10 seconds • Admin verification within 5-10 minutes
+            {/* QR Code Section */}
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-3xl p-6 md:p-8">
+                <p className="text-center text-gray-700 font-semibold mb-4 text-sm md:text-base">
+                    📱 Or Scan QR Code with any UPI app
                 </p>
-            </div>
 
-            {/* Customer Info */}
-            <div className="mt-6 text-center text-sm text-gray-600">
-                <p><strong>Name:</strong> {customerData?.name}</p>
-                <p><strong>Phone:</strong> {customerData?.phone}</p>
+                {/* QR Code - Centered */}
+                <div className="flex justify-center mb-6">
+                    <div className="bg-white p-4 md:p-6 rounded-2xl border-4 border-indigo-600 shadow-xl">
+                        {qrCodeImage ? (
+                            <img src={qrCodeImage} alt="Payment QR" className="w-48 h-48 md:w-64 md:h-64" />
+                        ) : (
+                            <QRCodeSVG
+                                value={upiLink}
+                                size={typeof window !== 'undefined' && window.innerWidth < 768 ? 192 : 256}
+                            />
+                        )}
+                    </div>
+                </div>
+
+                {/* Divider */}
+                <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t-2 border-gray-300"></div>
+                    </div>
+                    <div className="relative flex justify-center">
+                        <span className="bg-gradient-to-br from-indigo-50 to-purple-50 px-4 text-sm font-bold text-gray-600">OR</span>
+                    </div>
+                </div>
+
+                {/* UPI ID */}
+                <div>
+                    <p className="text-sm font-bold text-gray-700 text-center mb-3">Pay to UPI ID:</p>
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                        <code className="bg-white px-4 md:px-6 py-3 rounded-xl border-2 border-indigo-200 font-mono text-base md:text-lg font-bold text-indigo-700 break-all text-center">
+                            {upiId}
+                        </code>
+                        <button
+                            onClick={copyToClipboard}
+                            className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-md"
+                            title="Copy UPI ID"
+                        >
+                            {copied ? <Check size={20} /> : <Copy size={20} />}
+                        </button>
+                    </div>
+                </div>
             </div>
-        </motion.div>
+        </div>
+
+            {/* Action Buttons */ }
+    <div className="space-y-3 mt-6">
+        {/* I've Completed Payment Button */}
+        <button
+            onClick={handlePaymentComplete}
+            disabled={checkingStatus || paymentState === 'verified' || !showButton}
+            className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-2xl font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+        >
+            {checkingStatus ? (
+                <>
+                    <RefreshCw className="animate-spin" size={20} />
+                    Submitting...
+                </>
+            ) : paymentState === 'verified' ? (
+                <>
+                    <CheckCircle size={20} />
+                    Payment Verified!
+                </>
+            ) : (
+                <>
+                    <CheckCircle size={20} />
+                    I've Completed Payment
+                </>
+            )}
+        </button>
+
+        {!showButton && (
+            <p className="text-sm text-center text-gray-600">
+                Button appears in <span className="font-bold text-indigo-600">{countdown}s</span>
+            </p>
+        )}
+
+        {/* Manual Check Button */}
+        <button
+            onClick={handleManualCheck}
+            disabled={checkingStatus}
+            className="w-full bg-white text-indigo-700 border-2 border-indigo-600 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
+        >
+            <RefreshCw size={18} className={checkingStatus ? 'animate-spin' : ''} />
+            Check Payment Status
+        </button>
+    </div>
+
+    {/* Info Box */ }
+    <div className="mt-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+        <p className="text-sm text-blue-800 text-center">
+            ⚡ Auto-checking every 10 seconds • Admin verification within 5-10 minutes
+        </p>
+    </div>
+
+    {/* Customer Info */ }
+    <div className="mt-6 text-center text-sm text-gray-600">
+        <p><strong>Name:</strong> {customerData?.name}</p>
+        <p><strong>Phone:</strong> {customerData?.phone}</p>
+    </div>
+        </motion.div >
     );
 }
