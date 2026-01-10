@@ -31,13 +31,19 @@ export async function sendTelegramNotification({ sessionId, customer, amount, qr
         return false;
     }
 
+    // Safely access address fields
+    const street = customer?.address?.street || 'N/A';
+    const city = customer?.address?.city || 'N/A';
+    const state = customer?.address?.state || 'N/A';
+    const pincode = customer?.address?.pincode || 'N/A';
+
     const message = `
 🚨 *NEW PAYMENT PENDING*
 
 👤 *Customer:* ${customer.name}
 📱 *Phone:* ${customer.phone}
 💰 *Amount:* ₹${amount}
-🏠 *Address:* ${customer.address.street}, ${customer.address.city}, ${customer.address.state} - ${customer.address.pincode}
+🏠 *Address:* ${street}, ${city}, ${state} - ${pincode}
 🔖 *Session ID:* \`${sessionId}\`
 
 *Quick Actions:*
