@@ -122,7 +122,29 @@ export default function PaymentGateway({ orderId, amount = 600, orderData, prici
     const handlePaymentComplete = async () => {
         setCheckingStatus(true);
         try {
-            // Update payment status to pending verification
+            // First, check current payment status
+            const statusResponse = await fetch(`/api/order/status?orderId=${orderId}`);
+            const statusData = await statusResponse.json();
+
+            if (statusData.success && statusData.order) {
+                const currentStatus = statusData.order.paymentStatus;
+
+                // If already verified, show success
+                if (currentStatus === 'verified' || statusData.order.status === 'paid') {
+                    toast.success('Payment already verified! ✅');
+                    setPaymentCompleted(true);
+                    setPaymentStatus('verified');
+                    return;
+                }
+
+                // If failed, show error
+                if (currentStatus === 'failed') {
+                    toast.error('Payment failed. Please try again or contact support.');
+                    return;
+                }
+            }
+
+            // If pending, update to pending verification
             const response = await fetch('/api/order/status', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
@@ -133,17 +155,16 @@ export default function PaymentGateway({ orderId, amount = 600, orderData, prici
             });
 
             if (response.ok) {
-                toast.success('Payment submitted! Waiting for verification... ⏳', {
-                    duration: 4000
+                toast.success('Payment submitted! Our team will verify within 5-10 minutes. ⏳', {
+                    duration: 5000
                 });
-                // Start showing "waiting for verification" state
                 setPaymentStatus('pending');
             } else {
                 toast.error('Failed to update payment status');
             }
         } catch (error) {
             console.error('Payment status update failed:', error);
-            toast.error('Failed to update payment status');
+            toast.error('Failed to submit payment confirmation');
         } finally {
             setCheckingStatus(false);
         }
@@ -382,7 +403,10 @@ export default function PaymentGateway({ orderId, amount = 600, orderData, prici
                                                         } else if (status === 'failed') {
                                                             toast.error('Payment failed');
                                                         } else {
-                                                            toast.info('Payment still pending verification');
+                                                            toast('Payment still pending verification ⏳', {
+                                                                icon: '⏳',
+                                                                duration: 3000
+                                                            });
                                                         }
                                                     } else {
                                                         console.error('❌ No order data:', data);
