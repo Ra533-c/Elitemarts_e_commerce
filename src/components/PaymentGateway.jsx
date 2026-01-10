@@ -204,50 +204,69 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
         <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-3xl shadow-2xl p-8 max-w-2xl mx-auto"
+            className="bg-white rounded-3xl shadow-2xl p-6 md:p-8 max-w-2xl mx-auto"
         >
             {/* Header */}
-            <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                    💳 Complete Payment
+            <div className="text-center mb-6">
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">
+                    Complete Payment to Order
                 </h2>
-                <p className="text-5xl font-black text-indigo-600 mb-2">₹{amount}</p>
-                <p className="text-gray-600">Booking Fee (Balance ₹{pricing?.balanceDue || 599} on delivery)</p>
+                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl p-4 mb-3">
+                    <p className="text-sm font-semibold mb-1">Booking Amount</p>
+                    <p className="text-4xl md:text-5xl font-black">₹{amount}</p>
+                </div>
+                <p className="text-sm text-gray-600">
+                    ₹600 prepaid to order • ₹{pricing?.balanceDue || 599} Cash On Delivery
+                </p>
             </div>
 
             {/* Status Badge */}
-            <div className={`${statusInfo.color} border-2 rounded-2xl p-4 mb-6 flex items-center justify-center gap-3`}>
+            <div className={`${statusInfo.color} border-2 rounded-xl p-3 mb-6 flex items-center justify-center gap-2`}>
                 {statusInfo.icon}
-                <span className="font-semibold text-gray-800">{statusInfo.text}</span>
+                <span className="font-semibold text-sm md:text-base text-gray-800">{statusInfo.text}</span>
             </div>
 
-            {/* QR Code Section */}
-            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-3xl p-8 mb-6">
-                <p className="text-center text-gray-700 font-semibold mb-4">
+            {/* QR Code Section - Centered and Prominent */}
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-3xl p-6 md:p-8 mb-6">
+                <p className="text-center text-gray-700 font-semibold mb-4 text-sm md:text-base">
                     📱 Scan QR code with any UPI app
                 </p>
 
-                <div className="bg-white p-6 inline-block rounded-2xl border-4 border-indigo-600 mx-auto block shadow-lg">
-                    {qrCodeImage ? (
-                        <img src={qrCodeImage} alt="Payment QR" className="w-64 h-64 mx-auto" />
-                    ) : (
-                        <QRCodeSVG
-                            value={`upi://pay?pa=${upiId}&pn=EliteMarts&am=${amount}&cu=INR`}
-                            size={256}
-                        />
-                    )}
+                {/* QR Code - Centered */}
+                <div className="flex justify-center mb-6">
+                    <div className="bg-white p-4 md:p-6 rounded-2xl border-4 border-indigo-600 shadow-xl">
+                        {qrCodeImage ? (
+                            <img src={qrCodeImage} alt="Payment QR" className="w-48 h-48 md:w-64 md:h-64" />
+                        ) : (
+                            <QRCodeSVG
+                                value={`upi://pay?pa=${upiId}&pn=EliteMarts&am=${amount}&cu=INR`}
+                                size={window.innerWidth < 768 ? 192 : 256}
+                            />
+                        )}
+                    </div>
+                </div>
+
+                {/* Divider */}
+                <div className="relative my-6">
+                    <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t-2 border-gray-300"></div>
+                    </div>
+                    <div className="relative flex justify-center">
+                        <span className="bg-gradient-to-br from-indigo-50 to-purple-50 px-4 text-sm font-bold text-gray-600">OR</span>
+                    </div>
                 </div>
 
                 {/* UPI ID */}
-                <div className="mt-6">
-                    <p className="text-sm font-bold text-gray-700 text-center mb-2">Or pay to UPI ID:</p>
-                    <div className="flex items-center justify-center gap-3">
-                        <code className="bg-white px-6 py-3 rounded-xl border-2 border-indigo-200 font-mono text-lg font-bold text-indigo-700">
+                <div>
+                    <p className="text-sm font-bold text-gray-700 text-center mb-3">Pay to UPI ID:</p>
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                        <code className="bg-white px-4 md:px-6 py-3 rounded-xl border-2 border-indigo-200 font-mono text-base md:text-lg font-bold text-indigo-700 break-all text-center">
                             {upiId}
                         </code>
                         <button
                             onClick={copyToClipboard}
-                            className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors"
+                            className="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-md"
+                            title="Copy UPI ID"
                         >
                             {copied ? <Check size={20} /> : <Copy size={20} />}
                         </button>
