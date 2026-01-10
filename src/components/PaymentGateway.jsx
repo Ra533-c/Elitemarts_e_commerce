@@ -266,14 +266,26 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
                 <span className="font-semibold text-sm md:text-base text-gray-800">{statusInfo.text}</span>
             </div>
 
-            {/* Pay Now Button - Primary */}
+            {/* Pay Now Button - Opens UPI App */}
+            <button
+                onClick={() => {
+                    window.location.href = upiLink;
+                    toast.success('Opening UPI app...');
+                }}
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-5 rounded-2xl font-bold text-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-xl flex items-center justify-center gap-3 mb-4"
+            >
+                <Smartphone size={24} />
+                Pay Now ₹600
+            </button>
+
+            {/* Instamojo Button - Secondary */}
             {instamojoUrl && (
                 <button
                     onClick={openInstamojo}
-                    className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-5 rounded-2xl font-bold text-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-xl flex items-center justify-center gap-3 mb-6"
+                    className="w-full bg-white text-indigo-700 border-2 border-indigo-600 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 mb-6"
                 >
-                    <ExternalLink size={24} />
-                    Pay Now ₹600
+                    <ExternalLink size={18} />
+                    Or Pay via Instamojo
                 </button>
             )}
 
