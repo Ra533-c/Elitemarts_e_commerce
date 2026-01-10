@@ -10,8 +10,6 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
     // Payment status state machine
     const [paymentState, setPaymentState] = useState('idle'); // idle, submitted, verifying, verified, failed, expired
     const [copied, setCopied] = useState(false);
-    const [countdown, setCountdown] = useState(60);
-    const [showButton, setShowButton] = useState(false);
     const [checkingStatus, setCheckingStatus] = useState(false);
     const [instamojoUrl, setInstamojoUrl] = useState('');
 
@@ -27,16 +25,6 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
             setInstamojoUrl(url);
         }
     }, []);
-
-    // Countdown timer
-    useEffect(() => {
-        if (countdown > 0 && !showButton) {
-            const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-            return () => clearTimeout(timer);
-        } else if (countdown === 0) {
-            setShowButton(true);
-        }
-    }, [countdown, showButton]);
 
     // Auto-poll payment status every 10 seconds
     useEffect(() => {
@@ -323,7 +311,7 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
                 className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-5 rounded-2xl font-bold text-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-xl flex items-center justify-center gap-3 mb-4"
             >
                 <Smartphone size={24} />
-                Pay Now ₹600
+                Pay Now
             </button>
 
             {/* Instamojo Button - Secondary */}
@@ -333,65 +321,29 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
                     className="w-full bg-white text-indigo-700 border-2 border-indigo-600 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 mb-6"
                 >
                     <ExternalLink size={18} />
-                    Or Pay via Instamojo
+                    Or Pay via Instamojo (Instant Verification)
                 </button>
             )}
 
-            {/* Action Buttons */}
-            <div className="space-y-3 mt-6">
-                {/* I've Completed Payment Button */}
-                <button
-                    onClick={handlePaymentComplete}
-                    disabled={checkingStatus || paymentState === 'verified' || !showButton}
-                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-2xl font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                    {checkingStatus ? (
-                        <>
-                            <RefreshCw className="animate-spin" size={20} />
-                            Submitting...
-                        </>
-                    ) : paymentState === 'verified' ? (
-                        <>
-                            <CheckCircle size={20} />
-                            Payment Verified!
-                        </>
-                    ) : (
-                        <>
-                            <CheckCircle size={20} />
-                            I've Completed Payment
-                        </>
-                    )}
-                </button>
-
-                {!showButton && (
-                    <p className="text-sm text-center text-gray-600">
-                        Button appears in <span className="font-bold text-indigo-600">{countdown}s</span>
-                    </p>
-                )}
-
-                {/* Manual Check Button */}
-                <button
-                    onClick={handleManualCheck}
-                    disabled={checkingStatus}
-                    className="w-full bg-white text-indigo-700 border-2 border-indigo-600 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
-                >
-                    <RefreshCw size={18} className={checkingStatus ? 'animate-spin' : ''} />
-                    Check Payment Status
-                </button>
-            </div>
-
             {/* Info Box */}
-            <div className="mt-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
-                <p className="text-sm text-blue-800 text-center">
-                    ⚡ Auto-checking every 10 seconds • Admin verification within 5-10 minutes
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+                <p className="text-sm text-blue-800 text-center font-semibold mb-2">
+                    💡 After Payment
                 </p>
+                <ul className="text-xs text-blue-700 space-y-1">
+                    <li>✅ <strong>Instamojo:</strong> Instant automatic verification</li>
+                    <li>⏳ <strong>UPI Payment:</strong> Admin will verify within 5-10 minutes</li>
+                    <li>🔄 Status auto-updates every 10 seconds</li>
+                </ul>
             </div>
 
             {/* Customer Info */}
-            <div className="mt-6 text-center text-sm text-gray-600">
+            <div className="mt-6 text-center text-sm text-gray-600 bg-gray-50 rounded-xl p-4">
+                <p className="font-semibold text-gray-800 mb-2">Order Details</p>
                 <p><strong>Name:</strong> {customerData?.name}</p>
                 <p><strong>Phone:</strong> {customerData?.phone}</p>
+                <p className="text-xs text-gray-500 mt-2">Session ID: {sessionId?.slice(-8)}</p>
             </div>
-        </motion.div >
+        </motion.div>
     );
 }
