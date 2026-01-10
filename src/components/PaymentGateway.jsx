@@ -26,7 +26,7 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
         }
     }, []);
 
-    // Auto-poll payment status every 10 seconds
+    // Auto-poll payment status every 5 seconds
     useEffect(() => {
         if (!sessionId || paymentState === 'verified' || paymentState === 'failed') return;
 
@@ -62,8 +62,8 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
         // Initial check
         checkPaymentStatus();
 
-        // Poll every 10 seconds
-        const interval = setInterval(checkPaymentStatus, 10000);
+        // Poll every 5 seconds (changed from 10)
+        const interval = setInterval(checkPaymentStatus, 5000);
         return () => clearInterval(interval);
     }, [sessionId, paymentState, onPaymentVerified]);
 
