@@ -324,63 +324,62 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
                     </div>
                 </div>
             </div>
-        </div>
 
-            {/* Action Buttons */ }
-    <div className="space-y-3 mt-6">
-        {/* I've Completed Payment Button */}
-        <button
-            onClick={handlePaymentComplete}
-            disabled={checkingStatus || paymentState === 'verified' || !showButton}
-            className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-2xl font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-        >
-            {checkingStatus ? (
-                <>
-                    <RefreshCw className="animate-spin" size={20} />
-                    Submitting...
-                </>
-            ) : paymentState === 'verified' ? (
-                <>
-                    <CheckCircle size={20} />
-                    Payment Verified!
-                </>
-            ) : (
-                <>
-                    <CheckCircle size={20} />
-                    I've Completed Payment
-                </>
-            )}
-        </button>
+            {/* Action Buttons */}
+            <div className="space-y-3 mt-6">
+                {/* I've Completed Payment Button */}
+                <button
+                    onClick={handlePaymentComplete}
+                    disabled={checkingStatus || paymentState === 'verified' || !showButton}
+                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-2xl font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                    {checkingStatus ? (
+                        <>
+                            <RefreshCw className="animate-spin" size={20} />
+                            Submitting...
+                        </>
+                    ) : paymentState === 'verified' ? (
+                        <>
+                            <CheckCircle size={20} />
+                            Payment Verified!
+                        </>
+                    ) : (
+                        <>
+                            <CheckCircle size={20} />
+                            I've Completed Payment
+                        </>
+                    )}
+                </button>
 
-        {!showButton && (
-            <p className="text-sm text-center text-gray-600">
-                Button appears in <span className="font-bold text-indigo-600">{countdown}s</span>
-            </p>
-        )}
+                {!showButton && (
+                    <p className="text-sm text-center text-gray-600">
+                        Button appears in <span className="font-bold text-indigo-600">{countdown}s</span>
+                    </p>
+                )}
 
-        {/* Manual Check Button */}
-        <button
-            onClick={handleManualCheck}
-            disabled={checkingStatus}
-            className="w-full bg-white text-indigo-700 border-2 border-indigo-600 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
-        >
-            <RefreshCw size={18} className={checkingStatus ? 'animate-spin' : ''} />
-            Check Payment Status
-        </button>
-    </div>
+                {/* Manual Check Button */}
+                <button
+                    onClick={handleManualCheck}
+                    disabled={checkingStatus}
+                    className="w-full bg-white text-indigo-700 border-2 border-indigo-600 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
+                >
+                    <RefreshCw size={18} className={checkingStatus ? 'animate-spin' : ''} />
+                    Check Payment Status
+                </button>
+            </div>
 
-    {/* Info Box */ }
-    <div className="mt-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
-        <p className="text-sm text-blue-800 text-center">
-            ⚡ Auto-checking every 10 seconds • Admin verification within 5-10 minutes
-        </p>
-    </div>
+            {/* Info Box */}
+            <div className="mt-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
+                <p className="text-sm text-blue-800 text-center">
+                    ⚡ Auto-checking every 10 seconds • Admin verification within 5-10 minutes
+                </p>
+            </div>
 
-    {/* Customer Info */ }
-    <div className="mt-6 text-center text-sm text-gray-600">
-        <p><strong>Name:</strong> {customerData?.name}</p>
-        <p><strong>Phone:</strong> {customerData?.phone}</p>
-    </div>
+            {/* Customer Info */}
+            <div className="mt-6 text-center text-sm text-gray-600">
+                <p><strong>Name:</strong> {customerData?.name}</p>
+                <p><strong>Phone:</strong> {customerData?.phone}</p>
+            </div>
         </motion.div >
     );
 }
