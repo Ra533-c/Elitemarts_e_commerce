@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -13,11 +13,11 @@ import { User, Phone, MapPin, Loader2, Sparkles, ArrowRight } from 'lucide-react
 
 const orderSchema = z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
-    phone: z.string().regex(/^[6-9]\\d{9}$/, 'Invalid Indian mobile number'),
+    phone: z.string().min(10, 'Phone number must be 10 digits').max(10, 'Phone number must be 10 digits'),
     address: z.string().min(10, 'Address is too short (min 10 chars)'),
     city: z.string().min(2, 'City is required'),
     state: z.string().min(2, 'State is required'),
-    pincode: z.string().regex(/^\\d{6}$/, 'Invalid 6-digit PIN code'),
+    pincode: z.string().min(6, 'Pincode must be 6 digits').max(6, 'Pincode must be 6 digits'),
 });
 
 export default function OrderForm() {
@@ -30,15 +30,43 @@ export default function OrderForm() {
     const [showPayment, setShowPayment] = useState(false);
     const [orderId, setOrderId] = useState(null);
     const [showCelebration, setShowCelebration] = useState(false);
+    const [loadingPincode, setLoadingPincode] = useState(false);
     const [pricing] = useState({
         finalPrice: 1199,
         couponApplied: true,
         balanceDue: 599
     });
 
-    const { register, handleSubmit, formState: { errors }, watch } = useForm({
+    const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
         resolver: zodResolver(orderSchema)
     });
+
+    const pincode = watch('pincode');
+
+    // Auto-fill city and state based on pincode
+    useEffect(() => {
+        if (pincode && pincode.length === 6) {
+            setLoadingPincode(true);
+            fetch(`https://api.postalpincode.in/pincode/${pincode}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data[0] && data[0].Status === 'Success') {
+                        const postOffice = data[0].PostOffice[0];
+                        setValue('city', postOffice.District);
+                        setValue('state', postOffice.State);
+                        toast.success('City and State auto-filled!');
+                    } else {
+                        toast.error('Invalid pincode');
+                    }
+                })
+                .catch(err => {
+                    console.error('Pincode lookup error:', err);
+                })
+                .finally(() => {
+                    setLoadingPincode(false);
+                });
+        }
+    }, [pincode, setValue]);
 
     const onSubmit = async (data) => {
         try {
