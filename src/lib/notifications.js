@@ -6,31 +6,42 @@ const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
 let bot;
 
 if (botToken && adminChatId) {
-    bot = new TelegramBot(botToken, { polling: true });
+    try {
+        bot = new TelegramBot(botToken, { polling: true });
 
-    // Listen for ANY message and check for commands
-    bot.on('message', async (msg) => {
-        const text = msg.text;
-        if (!text) return;
+        // Listen for ANY message and check for commands
+        bot.on('message', async (msg) => {
+            const text = msg.text;
+            if (!text) return;
 
-        // Check for verify command (both /verify_SESSIONID and /verify SESSIONID)
-        const verifyMatch = text.match(/\/verify[_\s](.+)/);
-        if (verifyMatch) {
-            const sessionId = verifyMatch[1].trim();
-            await handleTelegramCommand(sessionId, 'verify', msg.chat.id);
-            return;
-        }
+            // Check for verify command (both /verify_SESSIONID and /verify SESSIONID)
+            const verifyMatch = text.match(/\/verify[_\s](.+)/);
+            if (verifyMatch) {
+                const sessionId = verifyMatch[1].trim();
+                await handleTelegramCommand(sessionId, 'verify', msg.chat.id);
+                return;
+            }
 
-        // Check for reject command (both /reject_SESSIONID and /reject SESSIONID)
-        const rejectMatch = text.match(/\/reject[_\s](.+)/);
-        if (rejectMatch) {
-            const sessionId = rejectMatch[1].trim();
-            await handleTelegramCommand(sessionId, 'reject', msg.chat.id);
-            return;
-        }
-    });
+            // Check for reject command (both /reject_SESSIONID and /reject SESSIONID)
+            const rejectMatch = text.match(/\/reject[_\s](.+)/);
+            if (rejectMatch) {
+                const sessionId = rejectMatch[1].trim();
+                await handleTelegramCommand(sessionId, 'reject', msg.chat.id);
+                return;
+            }
+        });
 
-    console.log('🤖 Telegram bot started successfully');
+        // Handle polling errors
+        bot.on('polling_error', (error) => {
+            console.error('⚠️ Telegram polling error:', error.message);
+            // Don't crash the app, just log the error
+        });
+
+        console.log('🤖 Telegram bot started successfully');
+    } catch (error) {
+        console.error('❌ Failed to start Telegram bot:', error.message);
+        console.log('💡 Tip: Make sure no other instance is running');
+    }
 } else {
     console.log('⚠️ Telegram bot not configured (missing TELEGRAM_BOT_TOKEN or TELEGRAM_ADMIN_CHAT_ID)');
 }
