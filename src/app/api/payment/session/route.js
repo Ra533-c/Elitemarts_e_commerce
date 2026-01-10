@@ -67,9 +67,15 @@ export async function POST(request) {
             expiresAt: new Date(Date.now() + 15 * 60 * 1000)
         };
 
-        // Save to MongoDB
+        // Save to MongoDB with indexes for performance
         const client = await clientPromise;
         const db = client.db('elitemarts');
+
+        // Create indexes (safe to call multiple times)
+        await db.collection('payment_sessions').createIndex({ sessionId: 1 }, { unique: true });
+        await db.collection('payment_sessions').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+        await db.collection('payment_sessions').createIndex({ paymentStatus: 1 });
+
         await db.collection('payment_sessions').insertOne(sessionDoc);
 
         // Return session data

@@ -321,7 +321,7 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
                     className="w-full bg-white text-indigo-700 border-2 border-indigo-600 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 mb-6"
                 >
                     <ExternalLink size={18} />
-                    Or Pay via Instamojo (Instant Verification)
+                    Pay via Instamojo (Instant Auto-Verification)
                 </button>
             )}
 
@@ -333,7 +333,7 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
                 <ul className="text-xs text-blue-700 space-y-1">
                     <li>✅ <strong>Instamojo:</strong> Instant automatic verification</li>
                     <li>⏳ <strong>UPI Payment:</strong> Admin will verify within 5-10 minutes</li>
-                    <li>🔄 Status auto-updates every 10 seconds</li>
+                    <li>🔄 Status auto-updates every 5 seconds</li>
                 </ul>
             </div>
 
