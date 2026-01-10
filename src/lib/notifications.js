@@ -8,16 +8,26 @@ let bot;
 if (botToken && adminChatId) {
     bot = new TelegramBot(botToken, { polling: true });
 
-    // Listen for /verify commands
-    bot.onText(/\/verify_(.+)/, async (msg, match) => {
-        const sessionId = match[1];
-        await handleTelegramCommand(sessionId, 'verify', msg.chat.id);
-    });
+    // Listen for ANY message and check for commands
+    bot.on('message', async (msg) => {
+        const text = msg.text;
+        if (!text) return;
 
-    // Listen for /reject commands
-    bot.onText(/\/reject_(.+)/, async (msg, match) => {
-        const sessionId = match[1];
-        await handleTelegramCommand(sessionId, 'reject', msg.chat.id);
+        // Check for verify command (both /verify_SESSIONID and /verify SESSIONID)
+        const verifyMatch = text.match(/\/verify[_\s](.+)/);
+        if (verifyMatch) {
+            const sessionId = verifyMatch[1].trim();
+            await handleTelegramCommand(sessionId, 'verify', msg.chat.id);
+            return;
+        }
+
+        // Check for reject command (both /reject_SESSIONID and /reject SESSIONID)
+        const rejectMatch = text.match(/\/reject[_\s](.+)/);
+        if (rejectMatch) {
+            const sessionId = rejectMatch[1].trim();
+            await handleTelegramCommand(sessionId, 'reject', msg.chat.id);
+            return;
+        }
     });
 
     console.log('🤖 Telegram bot started successfully');
@@ -71,15 +81,24 @@ async function handleTelegramCommand(sessionId, action, chatId) {
             return;
         }
 
-        // Dynamic import of database
-        const { default: clientPromise } = await import('./database');
+        // Dynamic import of database with proper error handling
+        let clientPromise;
+        try {
+            const dbModule = await import('@/lib/database');
+            clientPromise = dbModule.default;
+        } catch (importError) {
+            console.error('Database import error:', importError);
+            await bot.sendMessage(adminChatId, `❌ Database connection error: ${importError.message}`);
+            return;
+        }
+
         const client = await clientPromise;
         const db = client.db('elitemarts');
 
         const session = await db.collection('payment_sessions').findOne({ sessionId });
 
         if (!session) {
-            await bot.sendMessage(adminChatId, `❌ Session \`${sessionId}\` not found`, { parse_mode: 'Markdown' });
+            await bot.sendMessage(adminChatId, `❌ Session \`${sessionId}\` not found\n\nPossible reasons:\n• Session expired (15 min timeout)\n• Invalid session ID\n• Database connection issue`, { parse_mode: 'Markdown' });
             return;
         }
 
