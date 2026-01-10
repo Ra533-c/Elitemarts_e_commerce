@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/database';
 import QRCode from 'qrcode';
+import { sendTelegramNotification } from '@/lib/notifications';
+
 
 export async function POST(request) {
     try {
@@ -77,6 +79,14 @@ export async function POST(request) {
         await db.collection('payment_sessions').createIndex({ paymentStatus: 1 });
 
         await db.collection('payment_sessions').insertOne(sessionDoc);
+
+        // 🚨 SEND INSTANT TELEGRAM NOTIFICATION TO ADMIN
+        await sendTelegramNotification({
+            sessionId,
+            customer,
+            amount,
+            qrCode: sessionDoc.qrCode
+        });
 
         // Return session data
         return NextResponse.json({

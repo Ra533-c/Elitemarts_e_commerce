@@ -26,7 +26,7 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
         }
     }, []);
 
-    // Auto-poll payment status every 5 seconds
+    // Auto-poll payment status every 3 seconds
     useEffect(() => {
         if (!sessionId || paymentState === 'verified' || paymentState === 'failed') return;
 
@@ -62,8 +62,8 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
         // Initial check
         checkPaymentStatus();
 
-        // Poll every 5 seconds (changed from 10)
-        const interval = setInterval(checkPaymentStatus, 5000);
+        // Poll every 3 seconds (changed from 5)
+        const interval = setInterval(checkPaymentStatus, 3000);
         return () => clearInterval(interval);
     }, [sessionId, paymentState, onPaymentVerified]);
 
@@ -332,8 +332,9 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
                 </p>
                 <ul className="text-xs text-blue-700 space-y-1">
                     <li>✅ <strong>Instamojo:</strong> Instant automatic verification</li>
-                    <li>⏳ <strong>UPI Payment:</strong> Admin will verify within 5-10 minutes</li>
-                    <li>🔄 Status auto-updates every 5 seconds</li>
+                    <li>📱 <strong>UPI Payment:</strong> Admin gets instant Telegram notification</li>
+                    <li>⏱️ <strong>Admin verifies:</strong> Within 5-10 minutes</li>
+                    <li>🔄 <strong>Auto-updates:</strong> Every 3 seconds</li>
                 </ul>
             </div>
 

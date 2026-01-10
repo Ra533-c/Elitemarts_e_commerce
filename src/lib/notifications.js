@@ -1,14 +1,141 @@
-// This is a placeholder for actual SMS/WhatsApp integration
-// You would need valid API keys for Twilio or TextLocal
+import TelegramBot from 'node-telegram-bot-api';
+import clientPromise from './database.js';
 
-export async function sendSMS({ to, message }) {
-    console.log(`[MOCK SMS] To: ${to}, Message: ${message}`);
-    // In production: call Twilio/TextLocal API here
-    return true;
+const botToken = process.env.TELEGRAM_BOT_TOKEN;
+const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
+
+let bot;
+
+if (botToken && adminChatId) {
+    bot = new TelegramBot(botToken, { polling: true });
+
+    // Listen for /verify commands
+    bot.onText(/\/verify_(.+)/, async (msg, match) => {
+        const sessionId = match[1];
+        await handleTelegramCommand(sessionId, 'verify', msg.chat.id);
+    });
+
+    // Listen for /reject commands
+    bot.onText(/\/reject_(.+)/, async (msg, match) => {
+        const sessionId = match[1];
+        await handleTelegramCommand(sessionId, 'reject', msg.chat.id);
+    });
+
+    console.log('🤖 Telegram bot started successfully');
+} else {
+    console.log('⚠️ Telegram bot not configured (missing TELEGRAM_BOT_TOKEN or TELEGRAM_ADMIN_CHAT_ID)');
 }
 
-export async function sendWhatsApp({ to, template, parameters }) {
-    console.log(`[MOCK WHATSAPP] To: ${to}, Template: ${template}, Params: ${JSON.stringify(parameters)}`);
-    // In production: call Twilio WhatsApp API here
-    return true;
+export async function sendTelegramNotification({ sessionId, customer, amount, qrCode }) {
+    if (!bot || !adminChatId) {
+        console.log('⚠️ Telegram bot not configured');
+        return false;
+    }
+
+    const message = `
+🚨 *NEW PAYMENT PENDING*
+
+👤 *Customer:* ${customer.name}
+📱 *Phone:* ${customer.phone}
+💰 *Amount:* ₹${amount}
+🏠 *Address:* ${customer.address.street}, ${customer.address.city}, ${customer.address.state} - ${customer.address.pincode}
+🔖 *Session ID:* \`${sessionId}\`
+
+*Quick Actions:*
+/verify\\_${sessionId} - ✅ Verify Payment
+/reject\\_${sessionId} - ❌ Reject Payment
+
+⏰ *Verify within 15 minutes!*
+  `.trim();
+
+    try {
+        await bot.sendMessage(adminChatId, message, { parse_mode: 'Markdown' });
+        console.log(`📱 Telegram notification sent for session: ${sessionId}`);
+        return true;
+    } catch (error) {
+        console.error('Telegram notification error:', error);
+        return false;
+    }
 }
+
+async function handleTelegramCommand(sessionId, action, chatId) {
+    try {
+        // Only allow admin chat ID
+        if (chatId.toString() !== adminChatId.toString()) {
+            await bot.sendMessage(chatId, '❌ Unauthorized');
+            return;
+        }
+
+        const client = await clientPromise;
+        const db = client.db('elitemarts');
+
+        const session = await db.collection('payment_sessions').findOne({ sessionId });
+
+        if (!session) {
+            await bot.sendMessage(adminChatId, `❌ Session \`${sessionId}\` not found`, { parse_mode: 'Markdown' });
+            return;
+        }
+
+        if (session.paymentStatus === 'verified') {
+            await bot.sendMessage(adminChatId, `⚠️ Session \`${sessionId}\` already verified!`, { parse_mode: 'Markdown' });
+            return;
+        }
+
+        if (action === 'verify') {
+            // Update session to verified
+            await db.collection('payment_sessions').updateOne(
+                { sessionId },
+                {
+                    $set: {
+                        paymentStatus: 'verified',
+                        verifiedAt: new Date(),
+                        verifiedBy: 'telegram_admin'
+                    }
+                }
+            );
+
+            // Send confirmation
+            await bot.sendMessage(
+                adminChatId,
+                `✅ *Payment Verified!*\n\n` +
+                `Session: \`${sessionId}\`\n` +
+                `Customer: *${session.customerData.name}*\n` +
+                `Amount: *₹600*\n\n` +
+                `Order will be created automatically when user's page refreshes.`,
+                { parse_mode: 'Markdown' }
+            );
+
+            console.log(`✅ Payment verified via Telegram: ${sessionId}`);
+
+        } else if (action === 'reject') {
+            // Update session to failed
+            await db.collection('payment_sessions').updateOne(
+                { sessionId },
+                {
+                    $set: {
+                        paymentStatus: 'failed',
+                        failedAt: new Date(),
+                        failedBy: 'telegram_admin'
+                    }
+                }
+            );
+
+            await bot.sendMessage(
+                adminChatId,
+                `❌ *Payment Rejected*\n\n` +
+                `Session: \`${sessionId}\`\n` +
+                `Customer: *${session.customerData.name}*\n\n` +
+                `User will be notified to retry payment.`,
+                { parse_mode: 'Markdown' }
+            );
+
+            console.log(`❌ Payment rejected via Telegram: ${sessionId}`);
+        }
+
+    } catch (error) {
+        console.error('Telegram command error:', error);
+        await bot.sendMessage(adminChatId, `❌ Error: ${error.message}`);
+    }
+}
+
+export default bot;
