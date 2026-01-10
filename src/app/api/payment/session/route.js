@@ -26,6 +26,13 @@ export async function POST(request) {
             color: { dark: '#000000', light: '#FFFFFF' }
         });
 
+        // Generate Instamojo payment URL
+        const instamojoBaseUrl = process.env.INSTAMOJO_LINK || 'https://imjo.in/Hvu4ws';
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        const returnUrl = `${appUrl}/success`;
+
+        const instamojoUrl = `${instamojoBaseUrl}?amount=600&purpose=BOOKING_FEE&order_id=${sessionId}&buyer_name=${encodeURIComponent(customer.name)}&phone=${customer.phone}&redirect_url=${encodeURIComponent(returnUrl)}`;
+
         // Create payment session document
         const sessionDoc = {
             sessionId,
@@ -53,6 +60,7 @@ export async function POST(request) {
                 data: upiUrl,
                 expiresAt: new Date(Date.now() + 15 * 60 * 1000) // 15 minutes expiry
             },
+            instamojoUrl, // Add Instamojo URL
             paymentStatus: 'pending', // pending, verified, failed, expired
             orderId: null, // Will be set after order creation
             createdAt: new Date(),
@@ -69,6 +77,7 @@ export async function POST(request) {
             success: true,
             sessionId,
             qrCode: sessionDoc.qrCode,
+            instamojoUrl, // Return Instamojo URL
             customerData: sessionDoc.customerData,
             expiresAt: sessionDoc.expiresAt,
             message: 'Payment session created successfully'
