@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "webhook:setup": "echo Visit your deployment URL with ?action=set to configure webhook",
+    "webhook:info": "echo Visit your deployment URL with ?action=info to check webhook status",
+    "webhook:delete": "echo Visit your deployment URL with ?action=delete to remove webhook"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",

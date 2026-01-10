@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/database';
-import { sendSMS } from '@/lib/notifications';
+
 
 export async function POST(request) {
     try {
@@ -29,15 +29,14 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Order not found' }, { status: 404 });
         }
 
-        // Fetch order to get phone number
+
+        // Fetch order to get phone number (for future SMS integration)
         const order = await db.collection('orders').findOne({ orderId });
 
         if (order) {
-            await sendSMS({
-                to: order.phone,
-                message: `Payment confirmed for Order ${orderId}! We will ship shortly.`
-            });
+            console.log(`Payment verified for order ${orderId}, customer: ${order.phone}`);
         }
+
 
         return NextResponse.json({
             success: true,

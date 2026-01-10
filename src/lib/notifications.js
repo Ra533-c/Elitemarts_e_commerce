@@ -1,40 +1,16 @@
-import TelegramBot from 'node-telegram-bot-api';
-
-const botToken = process.env.TELEGRAM_BOT_TOKEN;
-const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
-
-let bot;
-
-// Initialize bot WITHOUT polling to avoid conflicts
-if (botToken && adminChatId) {
-    try {
-        // Create bot instance without polling (notification-only mode)
-        bot = new TelegramBot(botToken, { polling: false });
-
-        console.log('🤖 Telegram bot initialized (notification-only mode)');
-        console.log('📱 Admin Chat ID:', adminChatId);
-        console.log('💡 Note: Use admin panel to verify payments, or set up webhooks for Telegram commands');
-
-    } catch (error) {
-        console.error('❌ Failed to initialize Telegram bot:', error.message);
-    }
-} else {
-    console.log('⚠️ Telegram bot not configured');
-    if (!botToken) console.log('   Missing: TELEGRAM_BOT_TOKEN');
-    if (!adminChatId) console.log('   Missing: TELEGRAM_ADMIN_CHAT_ID');
-}
+import { bot, env } from './telegram';
 
 export async function sendTelegramNotification({ sessionId, customer, amount, qrCode }) {
-    if (!bot || !adminChatId) {
+    if (!bot || !env) {
         console.log('⚠️ Telegram bot not configured, skipping notification');
         return false;
     }
 
     // Safely access address fields
-    const street = customer?.address?.street || 'N/A';
-    const city = customer?.address?.city || 'N/A';
-    const state = customer?.address?.state || 'N/A';
-    const pincode = customer?.address?.pincode || 'N/A';
+    const street = customer?.address?.street || customer?.address || 'N/A';
+    const city = customer?.city || 'N/A';
+    const state = customer?.state || 'N/A';
+    const pincode = customer?.pincode || 'N/A';
 
     const message = `
 🚨 *NEW PAYMENT PENDING*
@@ -47,14 +23,13 @@ export async function sendTelegramNotification({ sessionId, customer, amount, qr
 
 ⏰ *Verify within 15 minutes!*
 
-💻 *To verify:* Go to your admin panel at:
-http://localhost:3000/admin
-
-Or use the API directly.
+*To verify or reject this payment, use:*
+\`/verify ${sessionId}\`
+\`/reject ${sessionId}\`
   `.trim();
 
     try {
-        await bot.sendMessage(adminChatId, message, { parse_mode: 'Markdown' });
+        await bot.sendMessage(env.TELEGRAM_ADMIN_CHAT_ID, message, { parse_mode: 'Markdown' });
         console.log(`📱 Telegram notification sent for session: ${sessionId}`);
         return true;
     } catch (error) {
@@ -63,107 +38,5 @@ Or use the API directly.
     }
 }
 
-async function handleTelegramCommand(sessionId, action, chatId) {
-    try {
-        console.log(`🔧 Handling ${action} command for session: ${sessionId}`);
-
-        // Only allow admin chat ID
-        if (chatId.toString() !== adminChatId.toString()) {
-            console.log(`⛔ Unauthorized access attempt from chat: ${chatId}`);
-            await bot.sendMessage(chatId, '❌ Unauthorized');
-            return;
-        }
-
-        // Dynamic import of database with proper error handling
-        let clientPromise;
-        try {
-            const dbModule = await import('@/lib/database');
-            clientPromise = dbModule.default;
-            console.log('✅ Database module loaded');
-        } catch (importError) {
-            console.error('❌ Database import error:', importError);
-            await bot.sendMessage(adminChatId, `❌ Database connection error: ${importError.message}`);
-            return;
-        }
-
-        const client = await clientPromise;
-        const db = client.db('elitemarts');
-        console.log('✅ Connected to database');
-
-        const session = await db.collection('payment_sessions').findOne({ sessionId });
-
-        if (!session) {
-            console.log(`❌ Session not found: ${sessionId}`);
-            await bot.sendMessage(
-                adminChatId,
-                `❌ Session \`${sessionId}\` not found\\n\\nPossible reasons:\\n• Session expired (15 min timeout)\\n• Invalid session ID\\n• Database connection issue`,
-                { parse_mode: 'Markdown' }
-            );
-            return;
-        }
-
-        console.log(`✅ Session found: ${sessionId}, current status: ${session.paymentStatus}`);
-
-        if (session.paymentStatus === 'verified') {
-            await bot.sendMessage(adminChatId, `⚠️ Session \`${sessionId}\` already verified!`, { parse_mode: 'Markdown' });
-            return;
-        }
-
-        if (action === 'verify') {
-            // Update session to verified
-            await db.collection('payment_sessions').updateOne(
-                { sessionId },
-                {
-                    $set: {
-                        paymentStatus: 'verified',
-                        verifiedAt: new Date(),
-                        verifiedBy: 'telegram_admin'
-                    }
-                }
-            );
-
-            console.log(`✅ Session ${sessionId} marked as verified`);
-
-            // Send confirmation
-            await bot.sendMessage(
-                adminChatId,
-                `✅ *Payment Verified!*\\n\\n` +
-                `Session: \`${sessionId}\`\\n` +
-                `Customer: *${session.customerData.name}*\\n` +
-                `Amount: *₹600*\\n\\n` +
-                `Order will be created automatically when user's page refreshes.`,
-                { parse_mode: 'Markdown' }
-            );
-
-        } else if (action === 'reject') {
-            // Update session to failed
-            await db.collection('payment_sessions').updateOne(
-                { sessionId },
-                {
-                    $set: {
-                        paymentStatus: 'failed',
-                        failedAt: new Date(),
-                        failedBy: 'telegram_admin'
-                    }
-                }
-            );
-
-            console.log(`❌ Session ${sessionId} marked as failed`);
-
-            await bot.sendMessage(
-                adminChatId,
-                `❌ *Payment Rejected*\\n\\n` +
-                `Session: \`${sessionId}\`\\n` +
-                `Customer: *${session.customerData.name}*\\n\\n` +
-                `User will be notified to retry payment.`,
-                { parse_mode: 'Markdown' }
-            );
-        }
-
-    } catch (error) {
-        console.error('❌ Command error:', error);
-        await bot.sendMessage(adminChatId, `❌ Error: ${error.message}`);
-    }
-}
-
 export default bot;
+
