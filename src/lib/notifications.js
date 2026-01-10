@@ -6,30 +6,56 @@ export async function sendTelegramNotification({ sessionId, customer, amount, qr
         return false;
     }
 
-    // Safely access address fields
+    // Safely access address fields with complete details
     const street = customer?.address?.street || customer?.address || 'N/A';
     const city = customer?.city || 'N/A';
     const state = customer?.state || 'N/A';
     const pincode = customer?.pincode || 'N/A';
+    const fullAddress = `${street}, ${city}, ${state} - ${pincode}`;
 
     const message = `
 🚨 *NEW PAYMENT PENDING*
 
-👤 *Customer:* ${customer.name}
-📱 *Phone:* ${customer.phone}
-💰 *Amount:* ₹${amount}
-🏠 *Address:* ${street}, ${city}, ${state} - ${pincode}
-🔖 *Session ID:* \`${sessionId}\`
+👤 *Customer Details:*
+• Name: ${customer.name}
+• Phone: ${customer.phone}
+• Email: ${customer.email || 'N/A'}
 
-⏰ *Verify within 15 minutes!*
+🏠 *Delivery Address:*
+${fullAddress}
 
-*To verify or reject this payment, use:*
-\`/verify ${sessionId}\`
-\`/reject ${sessionId}\`
+💰 *Payment Information:*
+• Amount: ₹${amount}
+• Session ID: \`${sessionId}\`
+
+⏰ *Action Required:*
+Please verify the payment within 15 minutes!
+
+_Click the buttons below to take action:_
   `.trim();
 
     try {
-        await bot.sendMessage(env.TELEGRAM_ADMIN_CHAT_ID, message, { parse_mode: 'Markdown' });
+        // Inline keyboard with clickable buttons
+        const keyboard = {
+            inline_keyboard: [
+                [
+                    {
+                        text: '✅ Verify Payment',
+                        callback_data: `verify_${sessionId}`
+                    },
+                    {
+                        text: '❌ Reject Payment',
+                        callback_data: `reject_${sessionId}`
+                    }
+                ]
+            ]
+        };
+
+        await bot.sendMessage(env.TELEGRAM_ADMIN_CHAT_ID, message, {
+            parse_mode: 'Markdown',
+            reply_markup: keyboard
+        });
+
         console.log(`📱 Telegram notification sent for session: ${sessionId}`);
         return true;
     } catch (error) {
@@ -39,4 +65,5 @@ export async function sendTelegramNotification({ sessionId, customer, amount, qr
 }
 
 export default bot;
+
 

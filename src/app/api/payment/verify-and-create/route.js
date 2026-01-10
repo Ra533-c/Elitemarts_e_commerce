@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/database';
+import { bot, env } from '@/lib/telegram';
 
 export async function POST(request) {
     try {
@@ -30,31 +31,54 @@ export async function POST(request) {
 
         // Check if order already exists (prevent duplicates)
         if (session.orderId) {
+            // Return existing order
+            const existingOrder = await db.collection('orders').findOne({ orderId: session.orderId });
             return NextResponse.json({
                 success: true,
                 orderId: session.orderId,
-                message: 'Order already exists'
+                message: 'Order already exists',
+                order: existingOrder
             });
         }
 
         // Generate Order ID
         const orderId = `ELITE-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
 
-        // Create order document with full payment tracking
+        // Calculate estimated delivery (4-6 business days from now)
+        const estimatedDeliveryStart = new Date();
+        estimatedDeliveryStart.setDate(estimatedDeliveryStart.getDate() + 4);
+        const estimatedDeliveryEnd = new Date();
+        estimatedDeliveryEnd.setDate(estimatedDeliveryEnd.getDate() + 6);
+
+        // Create order document with delivery tracking
         const orderDoc = {
             orderId,
             customerName: session.customerData.name,
             phone: session.customerData.phone,
+            email: session.customerData.email || null,
             address: session.customerData.address,
             pricing: session.pricing,
-            paymentStatus: 'verified',
-            status: 'paid',
+            paymentStatus: 'paid',
+            deliveryStatus: 'processing', // processing, shipped, out_for_delivery, delivered
+            status: 'confirmed',
             paymentSessionId: sessionId,
             paymentId: session.paymentId || 'manual_upi',
             paymentMethod: session.verifiedBy === 'instamojo' ? 'instamojo' : 'upi',
             createdAt: new Date(),
             paymentVerifiedAt: session.verifiedAt || new Date(),
             verifiedBy: session.verifiedBy || 'admin',
+            estimatedDelivery: {
+                start: estimatedDeliveryStart,
+                end: estimatedDeliveryEnd,
+                days: '4-6 business days'
+            },
+            trackingHistory: [
+                {
+                    status: 'confirmed',
+                    message: 'Order confirmed and payment received',
+                    timestamp: new Date()
+                }
+            ]
         };
 
         // Insert order
@@ -66,6 +90,27 @@ export async function POST(request) {
             { $set: { orderId, updatedAt: new Date() } }
         );
 
+        // Send notification to admin with Order ID
+        if (bot && env) {
+            try {
+                const adminMessage =
+                    `🎉 *ORDER CREATED SUCCESSFULLY!*\n\n` +
+                    `📦 *Order ID:* \`${orderId}\`\n` +
+                    `🔖 *Session ID:* \`${sessionId}\`\n\n` +
+                    `👤 *Customer:* ${session.customerData.name}\n` +
+                    `📱 *Phone:* ${session.customerData.phone}\n` +
+                    `💰 *Amount Paid:* ₹600\n\n` +
+                    `📅 *Estimated Delivery:* 4-6 business days\n` +
+                    `📍 *Status:* Processing`;
+
+                await bot.sendMessage(env.TELEGRAM_ADMIN_CHAT_ID, adminMessage, {
+                    parse_mode: 'Markdown'
+                });
+            } catch (notifError) {
+                console.error('Failed to send order notification:', notifError);
+            }
+        }
+
         return NextResponse.json({
             success: true,
             orderId,
@@ -74,7 +119,9 @@ export async function POST(request) {
                 orderId,
                 customerName: orderDoc.customerName,
                 phone: orderDoc.phone,
-                pricing: orderDoc.pricing
+                pricing: orderDoc.pricing,
+                estimatedDelivery: orderDoc.estimatedDelivery,
+                deliveryStatus: orderDoc.deliveryStatus
             }
         });
 
