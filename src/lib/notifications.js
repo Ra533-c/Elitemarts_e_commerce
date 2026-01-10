@@ -1,5 +1,4 @@
 import TelegramBot from 'node-telegram-bot-api';
-import clientPromise from './database.js';
 
 const botToken = process.env.TELEGRAM_BOT_TOKEN;
 const adminChatId = process.env.TELEGRAM_ADMIN_CHAT_ID;
@@ -66,6 +65,8 @@ async function handleTelegramCommand(sessionId, action, chatId) {
             return;
         }
 
+        // Dynamic import of database
+        const { default: clientPromise } = await import('./database');
         const client = await clientPromise;
         const db = client.db('elitemarts');
 

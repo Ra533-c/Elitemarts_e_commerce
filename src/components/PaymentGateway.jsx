@@ -302,17 +302,36 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
                 </div>
             </div>
 
-            {/* Pay Now Button - Opens UPI App */}
+            {/* Pay Now Button - Opens UPI App (Mobile Only) */}
             <button
                 onClick={() => {
-                    window.location.href = upiLink;
-                    toast.success('Opening UPI app...');
+                    // Check if mobile device
+                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+                    if (isMobile) {
+                        window.location.href = upiLink;
+                        toast.success('Opening UPI app...');
+                    } else {
+                        toast('Please scan the QR code below with your phone', {
+                            icon: '📱',
+                            duration: 4000
+                        });
+                    }
                 }}
                 className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-5 rounded-2xl font-bold text-xl hover:from-indigo-700 hover:to-purple-700 transition-all shadow-xl flex items-center justify-center gap-3 mb-4"
             >
                 <Smartphone size={24} />
                 Pay Now
             </button>
+
+            {/* Desktop Message */}
+            {typeof window !== 'undefined' && !/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && (
+                <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-3 mb-4">
+                    <p className="text-sm text-yellow-800 text-center">
+                        📱 <strong>On Desktop?</strong> Scan the QR code below with your phone's UPI app
+                    </p>
+                </div>
+            )}
 
             {/* Instamojo Button - Secondary */}
             {instamojoUrl && (
