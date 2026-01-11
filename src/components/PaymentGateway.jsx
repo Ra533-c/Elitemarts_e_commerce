@@ -12,6 +12,8 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
     const [copied, setCopied] = useState(false);
     const [checkingStatus, setCheckingStatus] = useState(false);
     const [instamojoUrl, setInstamojoUrl] = useState('');
+    const [timeRemaining, setTimeRemaining] = useState(180); // 3 minutes = 180 seconds
+    const [sessionExpired, setSessionExpired] = useState(false);
 
     const upiId = qrCodeData?.upiId || 'riya4862@airtel';
     const qrCodeImage = qrCodeData?.imageUrl;
@@ -26,13 +28,25 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
         }
     }, []);
 
-    // Auto-poll payment status every 3 seconds
+    // Auto-poll payment status with optimized timeout
     useEffect(() => {
-        if (!sessionId || paymentState === 'verified' || paymentState === 'failed') return;
+        if (!sessionId || paymentState === 'verified' || paymentState === 'failed' || paymentState === 'rejected') return;
+
+        let isMounted = true;
+        let interval;
 
         const checkPaymentStatus = async () => {
             try {
-                const response = await fetch(`/api/payment/session?sessionId=${sessionId}`);
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 2000); // 2s timeout
+
+                const response = await fetch(`/api/payment/session?sessionId=${sessionId}`, {
+                    signal: controller.signal
+                });
+                clearTimeout(timeout);
+
+                if (!isMounted) return;
+
                 const data = await response.json();
 
                 if (data.success && data.session) {
@@ -40,7 +54,7 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
 
                     if (status === 'verified') {
                         setPaymentState('verified');
-                        toast.success('Payment verified! Creating your order... 🎉');
+                        toast.success('Payment verified! Creating your order... 🎉', { duration: 2000 });
 
                         // Trigger order creation
                         if (onPaymentVerified) {
@@ -49,23 +63,75 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
                     } else if (status === 'failed') {
                         setPaymentState('failed');
                         toast.error('Payment verification failed');
+                    } else if (status === 'rejected') {
+                        // Admin rejected payment - STOP POLLING IMMEDIATELY
+                        setPaymentState('rejected');
+                        isMounted = false; // Stop all further checks
+                        if (interval) clearInterval(interval); // Clear interval immediately
+
+                        // Save customer data for auto-fill
+                        // customerData is already in the correct format from the form
+                        console.log('Saving rejected customer data:', customerData);
+                        localStorage.setItem('elitemarts_rejected_customer', JSON.stringify(customerData));
+
+                        toast.error('❌ Payment rejected by admin. Redirecting to retry...', {
+                            duration: 3000,
+                            icon: '🔄'
+                        });
+
+                        // Redirect to home page after 2 seconds
+                        setTimeout(() => {
+                            window.location.href = '/';
+                        }, 2000);
                     } else if (status === 'expired') {
                         setPaymentState('expired');
                         toast.error('Payment session expired');
                     }
                 }
             } catch (error) {
-                console.error('Status check failed:', error);
+                if (error.name === 'AbortError') {
+                    console.log('Status check timed out, retrying...');
+                } else {
+                    console.error('Status check failed:', error);
+                }
             }
         };
 
         // Initial check
         checkPaymentStatus();
 
-        // Poll every 3 seconds (changed from 5)
-        const interval = setInterval(checkPaymentStatus, 3000);
-        return () => clearInterval(interval);
-    }, [sessionId, paymentState, onPaymentVerified]);
+        // Poll every 3 seconds for optimized performance
+        interval = setInterval(checkPaymentStatus, 3000);
+
+        return () => {
+            isMounted = false;
+            if (interval) clearInterval(interval);
+        };
+    }, [sessionId, paymentState, onPaymentVerified, customerData]);
+
+    // 3-minute countdown timer
+    useEffect(() => {
+        if (paymentState === 'verified' || paymentState === 'failed' || sessionExpired) return;
+
+        const timer = setInterval(() => {
+            setTimeRemaining((prev) => {
+                if (prev <= 1) {
+                    // Timer expired
+                    clearInterval(timer);
+                    setSessionExpired(true);
+                    setPaymentState('expired');
+                    toast.error('Payment time expired! Please try again.', {
+                        duration: 5000,
+                        icon: '⏰'
+                    });
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [paymentState, sessionExpired]);
 
     const copyToClipboard = () => {
         navigator.clipboard.writeText(upiId);
@@ -183,6 +249,57 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
         }
     };
 
+    // Format time remaining as MM:SS
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    // Retry payment - generate new session with same customer data
+    const handleRetry = async () => {
+        setCheckingStatus(true);
+        toast.loading('Generating new payment session...', { id: 'retry-toast' });
+
+        try {
+            // Create new payment session with same customer data
+            const response = await fetch('/api/payment/session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customer: {
+                        name: customerData?.name,
+                        phone: customerData?.phone,
+                        address: customerData?.address?.street || customerData?.address,
+                        city: customerData?.address?.city || '',
+                        state: customerData?.address?.state || '',
+                        pincode: customerData?.address?.pincode || ''
+                    },
+                    pricing: pricing
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                toast.success('New payment session created! Timer reset to 3 minutes.', { id: 'retry-toast' });
+
+                // Reload page with new session to get fresh QR code
+                // This preserves the customer data in the new session
+                setTimeout(() => {
+                    window.location.href = `/payment?session=${data.sessionId}`;
+                }, 1000);
+            } else {
+                toast.error('Failed to create new session. Please try again.', { id: 'retry-toast' });
+                setCheckingStatus(false);
+            }
+        } catch (error) {
+            console.error('Retry error:', error);
+            toast.error('Failed to create new session. Please try again.', { id: 'retry-toast' });
+            setCheckingStatus(false);
+        }
+    };
+
     // Get status display info
     const getStatusInfo = () => {
         switch (paymentState) {
@@ -246,13 +363,117 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
                 <p className="text-sm text-gray-600">
                     ₹600 prepaid to order • ₹{pricing?.balanceDue || 599} Cash On Delivery
                 </p>
+
+                {/* Timer Display */}
+                {!sessionExpired && paymentState !== 'verified' && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`mt-4 p-3 rounded-xl border-2 ${timeRemaining > 60
+                            ? 'bg-green-50 border-green-300'
+                            : timeRemaining > 30
+                                ? 'bg-yellow-50 border-yellow-300'
+                                : 'bg-red-50 border-red-300 animate-pulse'
+                            }`}
+                    >
+                        <div className="flex items-center justify-center gap-2">
+                            <Clock className={`${timeRemaining > 60
+                                ? 'text-green-600'
+                                : timeRemaining > 30
+                                    ? 'text-yellow-600'
+                                    : 'text-red-600'
+                                }`} size={20} />
+                            <p className={`font-bold text-lg ${timeRemaining > 60
+                                ? 'text-green-700'
+                                : timeRemaining > 30
+                                    ? 'text-yellow-700'
+                                    : 'text-red-700'
+                                }`}>
+                                Time Remaining: {formatTime(timeRemaining)}
+                            </p>
+                        </div>
+                        <p className="text-xs text-center mt-1 text-gray-600">
+                            Complete payment within this time
+                        </p>
+                    </motion.div>
+                )}
             </div>
 
-            {/* Status Badge */}
-            <div className={`${statusInfo.color} border-2 rounded-xl p-3 mb-6 flex items-center justify-center gap-2`}>
+            {/* Expired Session - Retry UI */}
+            {sessionExpired && (
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="mb-6 bg-red-50 border-2 border-red-300 rounded-2xl p-6 text-center"
+                >
+                    <AlertCircle className="mx-auto mb-3 text-red-600" size={48} />
+                    <h3 className="text-xl font-bold text-red-900 mb-2">Payment Time Expired!</h3>
+                    <p className="text-red-700 mb-4">
+                        Your 3-minute payment window has expired. Please try again to get a new QR code.
+                    </p>
+                    <button
+                        onClick={handleRetry}
+                        className="bg-gradient-to-r from-red-600 to-pink-600 text-white px-8 py-3 rounded-xl font-bold hover:from-red-700 hover:to-pink-700 transition-all shadow-lg flex items-center justify-center gap-2 mx-auto"
+                    >
+                        <RefreshCw size={20} />
+                        Try Again - Get New QR Code
+                    </button>
+                </motion.div>
+            )}
+
+            {/* Status Badge with Animation */}
+            <motion.div
+                className={`${statusInfo.color} border-2 rounded-xl p-3 mb-6 flex items-center justify-center gap-2`}
+                animate={{ scale: paymentState === 'verifying' ? [1, 1.02, 1] : 1 }}
+                transition={{ repeat: paymentState === 'verifying' ? Infinity : 0, duration: 1.5 }}
+            >
                 {statusInfo.icon}
                 <span className="font-semibold text-sm md:text-base text-gray-800">{statusInfo.text}</span>
-            </div>
+            </motion.div>
+
+            {/* Processing Messages */}
+            {
+                (paymentState === 'submitted' || paymentState === 'verifying') && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-4"
+                    >
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                            <p className="text-sm font-semibold text-blue-900">Processing your payment...</p>
+                        </div>
+                        <div className="space-y-2 text-xs text-blue-700">
+                            <motion.p
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.5 }}
+                                className="flex items-center gap-2"
+                            >
+                                <span className="text-green-600">✓</span> Payment session created
+                            </motion.p>
+                            <motion.p
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 1 }}
+                                className="flex items-center gap-2"
+                            >
+                                <span className="text-green-600">✓</span> Admin notified instantly
+                            </motion.p>
+                            <motion.p
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 1.5 }}
+                                className="flex items-center gap-2"
+                            >
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                                Waiting for admin verification...
+                            </motion.p>
+                        </div>
+                        <p className="text-xs text-blue-600 mt-3 font-medium">⚡ Auto-checking every second for instant updates</p>
+                    </motion.div>
+                )
+            }
 
             {/* QR Code Section */}
             <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-3xl p-6 md:p-8 mb-6">
@@ -325,24 +546,28 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
             </button>
 
             {/* Desktop Message */}
-            {typeof window !== 'undefined' && !/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && (
-                <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-3 mb-4">
-                    <p className="text-sm text-yellow-800 text-center">
-                        📱 <strong>On Desktop?</strong> Scan the QR code below with your phone's UPI app
-                    </p>
-                </div>
-            )}
+            {
+                typeof window !== 'undefined' && !/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && (
+                    <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-3 mb-4">
+                        <p className="text-sm text-yellow-800 text-center">
+                            📱 <strong>On Desktop?</strong> Scan the QR code below with your phone's UPI app
+                        </p>
+                    </div>
+                )
+            }
 
             {/* Instamojo Button - Secondary */}
-            {instamojoUrl && (
-                <button
-                    onClick={openInstamojo}
-                    className="w-full bg-white text-indigo-700 border-2 border-indigo-600 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 mb-6"
-                >
-                    <ExternalLink size={18} />
-                    Pay via Instamojo (Instant Auto-Verification)
-                </button>
-            )}
+            {
+                instamojoUrl && (
+                    <button
+                        onClick={openInstamojo}
+                        className="w-full bg-white text-indigo-700 border-2 border-indigo-600 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 mb-6"
+                    >
+                        <ExternalLink size={18} />
+                        Pay via Instamojo (Instant Auto-Verification)
+                    </button>
+                )
+            }
 
             {/* Info Box */}
             <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">

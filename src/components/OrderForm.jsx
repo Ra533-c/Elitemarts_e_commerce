@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import PaymentGateway from './PaymentGateway';
 import PricingCard from './PricingCard';
 import CelebrationAnimation from './CelebrationAnimation';
-import { User, Phone, MapPin, Loader2, Sparkles, ArrowRight } from 'lucide-react';
+import { User, Phone, MapPin, Loader2, Sparkles, ArrowRight, AlertCircle } from 'lucide-react';
 
 const orderSchema = z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -31,6 +31,8 @@ export default function OrderForm() {
     const [orderId, setOrderId] = useState(null);
     const [showCelebration, setShowCelebration] = useState(false);
     const [loadingPincode, setLoadingPincode] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isAutoFilling, setIsAutoFilling] = useState(false);
     const [pricing] = useState({
         finalPrice: 1199,
         couponApplied: true,
@@ -43,8 +45,54 @@ export default function OrderForm() {
 
     const pincode = watch('pincode');
 
+    // Auto-fill from localStorage if payment was rejected
+    useEffect(() => {
+        console.log('Checking for rejected customer data...');
+        const savedData = localStorage.getItem('elitemarts_rejected_customer');
+        console.log('Saved data from localStorage:', savedData);
+
+        if (savedData) {
+            try {
+                setIsAutoFilling(true); // Prevent pincode lookup during auto-fill
+                const data = JSON.parse(savedData);
+                console.log('Parsed customer data:', data);
+
+                setValue('name', data.name);
+                setValue('phone', data.phone);
+                setValue('address', data.address);
+                setValue('city', data.city);
+                setValue('state', data.state);
+                setValue('pincode', data.pincode);
+
+                console.log('Form auto-filled successfully!');
+
+                toast.success('✨ Form auto-filled! Click "Proceed to Payment" to retry.', {
+                    duration: 5000,
+                    icon: '🔄'
+                });
+
+                // Clear after auto-fill
+                localStorage.removeItem('elitemarts_rejected_customer');
+                console.log('Cleared rejected customer data from localStorage');
+
+                // Re-enable pincode lookup after a short delay
+                setTimeout(() => {
+                    setIsAutoFilling(false);
+                }, 500);
+            } catch (e) {
+                console.error('Error loading saved data:', e);
+                setIsAutoFilling(false);
+            }
+        } else {
+            console.log('No rejected customer data found');
+        }
+    }, [setValue]);
+
     // Auto-fill city and state based on pincode
     useEffect(() => {
+        // Skip if auto-filling from rejected payment
+        if (isAutoFilling) return;
+
         if (pincode && pincode.length === 6) {
             setLoadingPincode(true);
             fetch(`https://api.postalpincode.in/pincode/${pincode}`)
@@ -66,12 +114,16 @@ export default function OrderForm() {
                     setLoadingPincode(false);
                 });
         }
-    }, [pincode, setValue]);
+    }, [pincode, setValue, isAutoFilling]);
 
     const onSubmit = async (data) => {
         try {
+            setIsSubmitting(true);
             setFormSubmitted(true);
             setCustomerData(data);
+
+            // Save customer data to localStorage (in case of rejection)
+            localStorage.setItem('elitemarts_last_customer', JSON.stringify(data));
 
             // Create payment session (NOT order yet!)
             const response = await fetch('/api/payment/session', {
@@ -88,6 +140,7 @@ export default function OrderForm() {
             if (result.success) {
                 setSessionId(result.sessionId);
                 setQrCodeData(result.qrCode);
+                setIsSubmitting(false);
 
                 // Show encouragement message first
                 setShowEncouragement(true);
@@ -100,11 +153,13 @@ export default function OrderForm() {
             } else {
                 toast.error(result.error || 'Failed to create payment session');
                 setFormSubmitted(false);
+                setIsSubmitting(false);
             }
         } catch (error) {
             console.error('Form submission error:', error);
             toast.error('Something went wrong. Please try again.');
             setFormSubmitted(false);
+            setIsSubmitting(false);
         }
     };
 
@@ -249,12 +304,79 @@ export default function OrderForm() {
                             {/* Submit Button */}
                             <button
                                 type="submit"
-                                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 rounded-2xl font-bold text-lg hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg flex items-center justify-center gap-2"
+                                disabled={isSubmitting}
+                                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 rounded-2xl font-bold text-lg hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
                             >
-                                Proceed to Payment
-                                <ArrowRight size={20} />
+                                {isSubmitting ? (
+                                    <>
+                                        <Loader2 size={20} className="animate-spin" />
+                                        Creating Payment Session...
+                                    </>
+                                ) : (
+                                    <>
+                                        Proceed to Payment
+                                        <ArrowRight size={20} />
+                                    </>
+                                )}
                             </button>
                         </form>
+                    </motion.div>
+                )}
+
+                {/* Loading Overlay - During Payment Session Creation */}
+                {isSubmitting && (
+                    <motion.div
+                        key="loading"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            className="bg-white rounded-3xl shadow-2xl p-8 max-w-md mx-4 text-center"
+                        >
+                            <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                                className="mx-auto mb-6"
+                            >
+                                <Loader2 className="w-16 h-16 text-indigo-600" />
+                            </motion.div>
+
+                            <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                                Creating Payment Session...
+                            </h3>
+
+                            <p className="text-gray-600 mb-4">
+                                Please wait while we prepare your payment gateway
+                            </p>
+
+                            <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4">
+                                <p className="text-sm font-semibold text-yellow-800 flex items-center justify-center gap-2">
+                                    <AlertCircle size={18} />
+                                    Do not close or refresh this page
+                                </p>
+                            </div>
+
+                            <div className="mt-4 flex items-center justify-center gap-2">
+                                <motion.div
+                                    animate={{ scale: [1, 1.2, 1] }}
+                                    transition={{ duration: 1, repeat: Infinity }}
+                                    className="w-2 h-2 bg-indigo-600 rounded-full"
+                                />
+                                <motion.div
+                                    animate={{ scale: [1, 1.2, 1] }}
+                                    transition={{ duration: 1, repeat: Infinity, delay: 0.2 }}
+                                    className="w-2 h-2 bg-indigo-600 rounded-full"
+                                />
+                                <motion.div
+                                    animate={{ scale: [1, 1.2, 1] }}
+                                    transition={{ duration: 1, repeat: Infinity, delay: 0.4 }}
+                                    className="w-2 h-2 bg-indigo-600 rounded-full"
+                                />
+                            </div>
+                        </motion.div>
                     </motion.div>
                 )}
 

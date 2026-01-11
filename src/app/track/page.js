@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { Search, Package, Truck, CheckCircle, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Package, Truck, CheckCircle, Clock, CreditCard, Wallet } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function OrderTrackingPage() {
     const [searchQuery, setSearchQuery] = useState('');
@@ -40,34 +41,54 @@ export default function OrderTrackingPage() {
         }
     };
 
-    const getStatusIcon = (status) => {
-        switch (status) {
-            case 'processing':
-                return <Clock className="w-6 h-6 text-blue-500" />;
-            case 'shipped':
-                return <Package className="w-6 h-6 text-purple-500" />;
-            case 'out_for_delivery':
-                return <Truck className="w-6 h-6 text-orange-500" />;
-            case 'delivered':
-                return <CheckCircle className="w-6 h-6 text-green-500" />;
-            default:
-                return <Clock className="w-6 h-6 text-gray-500" />;
-        }
+    // Auto-refresh order data every 30 seconds
+    useEffect(() => {
+        if (!orderData) return;
+
+        const refreshInterval = setInterval(async () => {
+            try {
+                const response = await fetch(`/api/order/track?orderId=${orderData.orderId}`);
+                const data = await response.json();
+                if (data.success) {
+                    setOrderData(data.order);
+                }
+            } catch (err) {
+                console.error('Auto-refresh failed:', err);
+            }
+        }, 30000); // 30 seconds
+
+        return () => clearInterval(refreshInterval);
+    }, [orderData]);
+
+    const getDeliveryStages = () => {
+        const stages = [
+            { id: 'processing', label: 'Processing', icon: Clock },
+            { id: 'shipped', label: 'Shipped', icon: Package },
+            { id: 'out_for_delivery', label: 'Out for Delivery', icon: Truck },
+            { id: 'delivered', label: 'Delivered', icon: CheckCircle }
+        ];
+
+        const currentIndex = stages.findIndex(s => s.id === orderData?.deliveryStatus);
+        return stages.map((stage, index) => ({
+            ...stage,
+            isActive: index <= currentIndex,
+            isCurrent: index === currentIndex
+        }));
     };
 
-    const getStatusText = (status) => {
-        switch (status) {
-            case 'processing':
-                return 'Order is being processed';
-            case 'shipped':
-                return 'Order has been shipped';
-            case 'out_for_delivery':
-                return 'Out for delivery';
-            case 'delivered':
-                return 'Delivered successfully';
-            default:
-                return 'Unknown status';
-        }
+    const calculateProgress = () => {
+        const stages = ['processing', 'shipped', 'out_for_delivery', 'delivered'];
+        const currentIndex = stages.indexOf(orderData?.deliveryStatus || 'processing');
+        return ((currentIndex + 1) / stages.length) * 100;
+    };
+
+    const getDaysElapsed = () => {
+        if (!orderData?.createdAt) return 0;
+        const created = new Date(orderData.createdAt);
+        const now = new Date();
+        const diffTime = Math.abs(now - created);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return Math.min(diffDays, 6);
     };
 
     return (
@@ -104,134 +125,207 @@ export default function OrderTrackingPage() {
 
                 {/* Error Message */}
                 {error && (
-                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700"
+                    >
                         {error}
-                    </div>
+                    </motion.div>
                 )}
 
                 {/* Order Details */}
-                {orderData && (
-                    <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6">
-                        {/* Order Header */}
-                        <div className="border-b pb-6">
-                            <div className="flex justify-between items-start mb-4">
-                                <div>
-                                    <h2 className="text-2xl font-bold text-gray-900 mb-1">Order Details</h2>
-                                    <p className="text-gray-600">Order ID: <span className="font-mono font-semibold">{orderData.orderId}</span></p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm text-gray-600">Order Date</p>
-                                    <p className="font-semibold">{new Date(orderData.createdAt).toLocaleDateString()}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Delivery Status */}
-                        <div>
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-semibold text-gray-900">Delivery Status</h3>
-                                <div className="flex items-center gap-2">
-                                    {getStatusIcon(orderData.deliveryStatus)}
-                                    <span className="font-medium text-gray-700">{getStatusText(orderData.deliveryStatus)}</span>
+                <AnimatePresence>
+                    {orderData && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white rounded-2xl shadow-xl p-8 space-y-6"
+                        >
+                            {/* Order Header */}
+                            <div className="border-b pb-6">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-gray-900 mb-1">Order Details</h2>
+                                        <p className="text-gray-600">Order ID: <span className="font-mono font-semibold">{orderData.orderId}</span></p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm text-gray-600">Order Date</p>
+                                        <p className="font-semibold">{new Date(orderData.createdAt).toLocaleDateString('en-IN')}</p>
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Progress Bar */}
-                            <div className="relative">
-                                <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all duration-1000 ease-out"
-                                        style={{ width: `${orderData.progressPercentage}%` }}
-                                    />
-                                </div>
-                                <p className="text-sm text-gray-600 mt-2 text-center">
-                                    {orderData.progressPercentage}% Complete
-                                </p>
-                            </div>
-
-                            {/* Status Steps */}
-                            <div className="grid grid-cols-4 gap-2 mt-6">
-                                {['processing', 'shipped', 'out_for_delivery', 'delivered'].map((status, index) => {
-                                    const isActive = ['processing', 'shipped', 'out_for_delivery', 'delivered'].indexOf(orderData.deliveryStatus) >= index;
-                                    return (
-                                        <div key={status} className="text-center">
-                                            <div className={`w-3 h-3 rounded-full mx-auto mb-2 ${isActive ? 'bg-purple-600' : 'bg-gray-300'}`} />
-                                            <p className={`text-xs ${isActive ? 'text-purple-600 font-semibold' : 'text-gray-400'}`}>
-                                                {status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                            </p>
+                            {/* Payment Status Section */}
+                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                    <CreditCard className="w-5 h-5 text-green-600" />
+                                    Payment Status
+                                </h3>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    {/* Prepaid Amount */}
+                                    <div className="bg-white rounded-lg p-4 border-2 border-green-500">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-sm font-medium text-gray-600">Prepaid Amount</span>
+                                            <span className="px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full">
+                                                PAID ✓
+                                            </span>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
+                                        <p className="text-3xl font-bold text-green-600">₹600</p>
+                                        <p className="text-xs text-gray-500 mt-1">Payment Method: {orderData.paymentMethod || 'UPI/Online'}</p>
+                                    </div>
 
-                        {/* Estimated Delivery */}
-                        {orderData.estimatedDelivery && (
-                            <div className="bg-blue-50 rounded-lg p-4">
-                                <p className="text-sm text-blue-900 font-medium mb-1">Estimated Delivery</p>
-                                <p className="text-2xl font-bold text-blue-700">{orderData.estimatedDelivery.days}</p>
-                                <p className="text-sm text-blue-600 mt-1">
-                                    Expected: {new Date(orderData.estimatedDelivery.start).toLocaleDateString()} - {new Date(orderData.estimatedDelivery.end).toLocaleDateString()}
-                                </p>
-                            </div>
-                        )}
-
-                        {/* Customer Details */}
-                        <div className="grid md:grid-cols-2 gap-6 pt-6 border-t">
-                            <div>
-                                <h4 className="font-semibold text-gray-900 mb-3">Customer Information</h4>
-                                <div className="space-y-2 text-sm">
-                                    <p><span className="text-gray-600">Name:</span> <span className="font-medium">{orderData.customerName}</span></p>
-                                    <p><span className="text-gray-600">Phone:</span> <span className="font-medium">{orderData.phone}</span></p>
-                                </div>
-                            </div>
-                            <div>
-                                <h4 className="font-semibold text-gray-900 mb-3">Delivery Address</h4>
-                                <p className="text-sm text-gray-700">
-                                    {orderData.address.street}, {orderData.address.city}, {orderData.address.state} - {orderData.address.pincode}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Payment Details */}
-                        <div className="bg-green-50 rounded-lg p-4">
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <p className="text-sm text-green-900 font-medium">Payment Status</p>
-                                    <p className="text-lg font-bold text-green-700">Paid ✓</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm text-green-900">Amount Paid</p>
-                                    <p className="text-2xl font-bold text-green-700">₹{orderData.pricing.prepaidAmount}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Tracking History */}
-                        {orderData.trackingHistory && orderData.trackingHistory.length > 0 && (
-                            <div className="pt-6 border-t">
-                                <h4 className="font-semibold text-gray-900 mb-4">Tracking History</h4>
-                                <div className="space-y-3">
-                                    {orderData.trackingHistory.map((event, index) => (
-                                        <div key={index} className="flex gap-3">
-                                            <div className="w-2 h-2 rounded-full bg-purple-600 mt-2" />
-                                            <div className="flex-1">
-                                                <p className="font-medium text-gray-900">{event.message}</p>
-                                                <p className="text-sm text-gray-600">{new Date(event.timestamp).toLocaleString()}</p>
-                                            </div>
+                                    {/* COD Balance */}
+                                    <div className="bg-white rounded-lg p-4 border-2 border-orange-400">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-sm font-medium text-gray-600">Balance (COD)</span>
+                                            <span className="px-3 py-1 bg-orange-400 text-white text-xs font-bold rounded-full">
+                                                {orderData.deliveryStatus === 'delivered' ? 'PAID ✓' : 'PENDING'}
+                                            </span>
                                         </div>
-                                    ))}
+                                        <p className="text-3xl font-bold text-orange-600">₹{orderData.pricing?.balanceDue || 599}</p>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            {orderData.deliveryStatus === 'delivered' ? 'Paid on delivery' : 'Pay on delivery'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Total Amount */}
+                                <div className="mt-4 pt-4 border-t border-green-200">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-lg font-semibold text-gray-700">Total Order Value:</span>
+                                        <span className="text-2xl font-bold text-gray-900">₹{orderData.pricing?.finalPrice || 1199}</span>
+                                    </div>
                                 </div>
                             </div>
-                        )}
-                    </div>
-                )}
+
+                            {/* Delivery Status with Animation */}
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Delivery Progress</h3>
+
+                                {/* Animated Progress Bar */}
+                                <div className="mb-6">
+                                    <div className="relative h-4 bg-gray-200 rounded-full overflow-hidden">
+                                        <motion.div
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${calculateProgress()}%` }}
+                                            transition={{ duration: 1, ease: "easeOut" }}
+                                            className="h-full bg-gradient-to-r from-purple-500 via-blue-500 to-green-500 rounded-full"
+                                        />
+                                    </div>
+                                    <p className="text-sm text-gray-600 mt-2 text-center font-medium">
+                                        {calculateProgress().toFixed(0)}% Complete • Day {getDaysElapsed()} of 4-6
+                                    </p>
+                                </div>
+
+                                {/* Delivery Stages */}
+                                <div className="grid grid-cols-4 gap-2">
+                                    {getDeliveryStages().map((stage, index) => {
+                                        const Icon = stage.icon;
+                                        return (
+                                            <motion.div
+                                                key={stage.id}
+                                                initial={{ opacity: 0, y: 20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: index * 0.1 }}
+                                                className="text-center"
+                                            >
+                                                <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-all ${stage.isActive
+                                                        ? 'bg-purple-600 text-white scale-110'
+                                                        : 'bg-gray-200 text-gray-400'
+                                                    }`}>
+                                                    <Icon className="w-6 h-6" />
+                                                </div>
+                                                <p className={`text-xs font-medium ${stage.isActive ? 'text-purple-600' : 'text-gray-400'
+                                                    }`}>
+                                                    {stage.label}
+                                                </p>
+                                                {stage.isCurrent && (
+                                                    <motion.div
+                                                        initial={{ scale: 0 }}
+                                                        animate={{ scale: 1 }}
+                                                        className="mt-1"
+                                                    >
+                                                        <span className="inline-block px-2 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded">
+                                                            Current
+                                                        </span>
+                                                    </motion.div>
+                                                )}
+                                            </motion.div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Estimated Delivery */}
+                            {orderData.estimatedDelivery && (
+                                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                                    <p className="text-sm text-blue-900 font-medium mb-1">Estimated Delivery</p>
+                                    <p className="text-2xl font-bold text-blue-700">{orderData.estimatedDelivery.days}</p>
+                                    <p className="text-sm text-blue-600 mt-1">
+                                        Expected: {new Date(orderData.estimatedDelivery.start).toLocaleDateString('en-IN')} - {new Date(orderData.estimatedDelivery.end).toLocaleDateString('en-IN')}
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Customer Details */}
+                            <div className="grid md:grid-cols-2 gap-6 pt-6 border-t">
+                                <div>
+                                    <h4 className="font-semibold text-gray-900 mb-3">Customer Information</h4>
+                                    <div className="space-y-2 text-sm">
+                                        <p><span className="text-gray-600">Name:</span> <span className="font-medium">{orderData.customerName}</span></p>
+                                        <p><span className="text-gray-600">Phone:</span> <span className="font-medium">{orderData.phone}</span></p>
+                                        {orderData.email && (
+                                            <p><span className="text-gray-600">Email:</span> <span className="font-medium">{orderData.email}</span></p>
+                                        )}
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold text-gray-900 mb-3">Delivery Address</h4>
+                                    <p className="text-sm text-gray-700">
+                                        {orderData.address.street}, {orderData.address.city}, {orderData.address.state} - {orderData.address.pincode}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Tracking History */}
+                            {orderData.trackingHistory && orderData.trackingHistory.length > 0 && (
+                                <div className="pt-6 border-t">
+                                    <h4 className="font-semibold text-gray-900 mb-4">Tracking History</h4>
+                                    <div className="space-y-3">
+                                        {orderData.trackingHistory.map((event, index) => (
+                                            <motion.div
+                                                key={index}
+                                                initial={{ opacity: 0, x: -20 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ delay: index * 0.1 }}
+                                                className="flex gap-3"
+                                            >
+                                                <div className="w-2 h-2 rounded-full bg-purple-600 mt-2 flex-shrink-0" />
+                                                <div className="flex-1">
+                                                    <p className="font-medium text-gray-900">{event.message}</p>
+                                                    <p className="text-sm text-gray-600">{new Date(event.timestamp).toLocaleString('en-IN')}</p>
+                                                </div>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Auto-refresh indicator */}
+                            <div className="text-center text-xs text-gray-500 pt-4 border-t">
+                                <p>🔄 Auto-refreshing every 30 seconds for real-time updates</p>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {/* Help Section */}
                 {!orderData && !loading && (
                     <div className="text-center mt-12 text-gray-600">
                         <p className="mb-2">Need help?</p>
-                        <p className="text-sm">Contact us at <a href="tel:+918607832386" className="text-purple-600 hover:underline">+91 8607832386</a></p>
+                        <p className="text-sm">Contact us at <a href="tel:+918607832386" className="text-purple-600 hover:underline font-medium">+91 8607832386</a></p>
                     </div>
                 )}
             </div>

@@ -1,8 +1,57 @@
 ================================================================================
 ELITEMARTS E-COMMERCE PROJECT - COMPLETE SOURCE CODE
 ================================================================================
-Generated: 1/10/2026, 10:58:34 PM
-Size Limit: 50MB
+Generated: 1/11/2026, 9:42:11 PM
+Size Limit: 10MB
+================================================================================
+
+PROJECT OVERVIEW
+--------------------------------------------------------------------------------
+EliteMarts is a Next.js-based e-commerce platform with the following features:
+
+✓ Product showcase and ordering system
+✓ Payment integration with Instamojo
+✓ Order tracking and management
+✓ Admin panel for order verification
+✓ Telegram bot integration for notifications
+✓ MongoDB database for data persistence
+✓ PDF invoice generation
+
+TECH STACK
+--------------------------------------------------------------------------------
+Frontend: Next.js 15, React, Tailwind CSS
+Backend: Next.js API Routes
+Database: MongoDB
+Payment: Instamojo
+Notifications: Telegram Bot API
+PDF: jsPDF
+Deployment: Vercel
+
+DIRECTORY STRUCTURE
+--------------------------------------------------------------------------------
+src/
+  ├── app/                    # Next.js app directory
+  │   ├── api/               # API routes
+  │   │   ├── admin/         # Admin endpoints
+  │   │   ├── order/         # Order management
+  │   │   ├── payment/       # Payment processing
+  │   │   └── telegram/      # Telegram webhook
+  │   ├── admin/             # Admin panel page
+  │   ├── success/           # Payment success page
+  │   ├── track/             # Order tracking page
+  │   └── page.js            # Home page
+  ├── components/            # React components
+  └── lib/                   # Utility libraries
+      ├── database.js        # MongoDB connection
+      ├── telegram.js        # Telegram bot
+      ├── notifications.js   # Notification system
+      └── clientInvoice.js   # PDF generation
+
+public/                      # Static assets
+scripts/                     # Utility scripts
+
+================================================================================
+SOURCE CODE FILES
 ================================================================================
 
 
@@ -181,107 +230,6 @@ https://nextjs.org/docs/messages/module-not-found
 ================================================================================
 
 ================================================================================
-FILE: CODE_PDF_README.md
---------------------------------------------------------------------------------
-# EliteMarts - Code Documentation
-
-## 📄 PDF Generated Successfully!
-
-**File:** `EliteMarts_Source_Code.pdf`  
-**Size:** ~2-3 MB (manageable size)  
-**Pages:** 26 pages  
-**Files Included:** 11 key files
-
----
-
-## 📋 Files Included in PDF
-
-### API Routes (4 files)
-1. ✅ `src/app/api/telegram/webhook/route.js` - Telegram webhook endpoint
-2. ✅ `src/app/api/payment/session/route.js` - Payment session creation
-3. ✅ `src/app/api/payment/verify-and-create/route.js` - Order creation after verification
-4. ✅ `src/app/api/order/track/route.js` - Order tracking API
-
-### Libraries (3 files)
-5. ✅ `src/lib/clientInvoice.js` - Professional PDF invoice generator
-6. ✅ `src/lib/notifications.js` - Telegram notifications with inline buttons
-7. ✅ `src/lib/database.js` - MongoDB connection
-
-### Pages (2 files)
-8. ✅ `src/app/track/page.js` - Order tracking page with progress bar
-9. ✅ `src/app/page.js` - Main landing page
-
-### Configuration (2 files)
-10. ✅ `package.json` - Dependencies and scripts
-11. ✅ `vercel.json` - Vercel deployment configuration
-
----
-
-## 🗑️ Cleaned Up
-
-**Deleted files:**
-- ❌ `PROJECT_COMPLETE_CODE.txt` (200+ MB)
-- ❌ `PROJECT_CODE_UPDATED.txt` (200+ MB)
-
-These files were too large and contained duplicate/unnecessary data.
-
----
-
-## 📊 PDF Features
-
-- **Clean Layout:** Professional formatting with headers
-- **Syntax Highlighting:** Monospace font for code
-- **File Separation:** Each file starts on a new page
-- **Compact:** Only essential files included
-- **Readable:** Optimized font size and spacing
-
----
-
-## 🎯 What's NOT in the PDF (to keep size small)
-
-- ❌ `node_modules` folder
-- ❌ `.next` build folder
-- ❌ Test files
-- ❌ Documentation files (already in separate .md files)
-- ❌ Component files (UI components are standard React)
-
----
-
-## 📁 Complete Project Structure
-
-For complete project structure, refer to:
-- `PROJECT_UPDATE_SUMMARY.md` - Feature summary
-- `TELEGRAM_IMPROVEMENTS.md` - Bot improvements
-- `TELEGRAM_BOT_SETUP.md` - Setup guide
-- `DEPLOYMENT_GUIDE.md` - Deployment instructions
-
----
-
-## 🔧 To Regenerate PDF
-
-If you need to regenerate or add more files:
-
-```bash
-node generate-code-pdf.js
-```
-
-Edit `generate-code-pdf.js` to add/remove files from the `KEY_FILES` array.
-
----
-
-## ✅ Summary
-
-✅ **PDF Created:** EliteMarts_Source_Code.pdf  
-✅ **Size:** Manageable (~2-3 MB instead of 200+ MB)  
-✅ **Content:** All essential source code  
-✅ **Format:** Professional and readable  
-✅ **Old Files:** Deleted to save space  
-
-**The PDF is ready to share or archive!** 🎉
-
-================================================================================
-
-================================================================================
 FILE: DEPLOYMENT_GUIDE.md
 --------------------------------------------------------------------------------
 # 🚀 Quick Deployment Guide
@@ -428,134 +376,6 @@ const eslintConfig = defineConfig([
 ]);
 
 export default eslintConfig;
-
-================================================================================
-
-================================================================================
-FILE: generate-code-pdf.js
---------------------------------------------------------------------------------
-const fs = require('fs');
-const path = require('path');
-const { jsPDF } = require('jspdf');
-
-// Key files to document
-const KEY_FILES = [
-    // API Routes
-    'src/app/api/telegram/webhook/route.js',
-    'src/app/api/payment/session/route.js',
-    'src/app/api/payment/verify-and-create/route.js',
-    'src/app/api/order/track/route.js',
-
-    // Libraries
-    'src/lib/clientInvoice.js',
-    'src/lib/notifications.js',
-    'src/lib/database.js',
-
-    // Pages
-    'src/app/track/page.js',
-    'src/app/page.js',
-
-    // Config
-    'package.json',
-    'vercel.json'
-];
-
-async function createCodePDF() {
-    console.log('🚀 Starting PDF generation...');
-
-    const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-        compress: true
-    });
-
-    const margin = 12;
-    const pageWidth = doc.internal.pageSize.width;
-    const pageHeight = doc.internal.pageSize.height;
-    const maxWidth = pageWidth - 2 * margin;
-    let y = margin;
-
-    // Title Page
-    doc.setFontSize(28);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(30, 64, 175); // Blue
-    doc.text('EliteMarts', pageWidth / 2, 60, { align: 'center' });
-
-    doc.setFontSize(14);
-    doc.setTextColor(0, 0, 0);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Source Code Documentation', pageWidth / 2, 75, { align: 'center' });
-
-    doc.setFontSize(10);
-    doc.text(new Date().toLocaleString('en-IN'), pageWidth / 2, 90, { align: 'center' });
-
-    let fileCount = 0;
-
-    // Process files
-    for (const filePath of KEY_FILES) {
-        const fullPath = path.join(process.cwd(), filePath);
-
-        if (!fs.existsSync(fullPath)) {
-            console.log(`⚠️  Skipping: ${filePath} (not found)`);
-            continue;
-        }
-
-        try {
-            const content = fs.readFileSync(fullPath, 'utf8');
-            fileCount++;
-
-            // New page for each file
-            doc.addPage();
-            y = margin;
-
-            // File header
-            doc.setFillColor(240, 240, 240);
-            doc.rect(margin, y, maxWidth, 12, 'F');
-
-            doc.setFontSize(9);
-            doc.setFont('helvetica', 'bold');
-            doc.setTextColor(0, 0, 0);
-            doc.text(`📄 ${filePath}`, margin + 3, y + 7);
-            y += 15;
-
-            // Content
-            doc.setFontSize(7);
-            doc.setFont('courier', 'normal');
-
-            const lines = content.split('\n').slice(0, 500); // Limit lines per file
-
-            for (const line of lines) {
-                if (y > pageHeight - margin - 3) {
-                    doc.addPage();
-                    y = margin;
-                }
-
-                const trimmedLine = line.substring(0, 120); // Limit line length
-                doc.text(trimmedLine, margin + 2, y);
-                y += 3.5;
-            }
-
-            console.log(`✅ Added: ${filePath}`);
-
-        } catch (error) {
-            console.error(`❌ Error with ${filePath}:`, error.message);
-        }
-    }
-
-    // Save
-    const filename = 'EliteMarts_Source_Code.pdf';
-    doc.save(filename);
-    console.log(`\n🎉 PDF created successfully!`);
-    console.log(`📦 File: ${filename}`);
-    console.log(`📊 Files included: ${fileCount}`);
-    console.log(`📄 Total pages: ${doc.internal.pages.length - 1}`);
-}
-
-createCodePDF().catch(err => {
-    console.error('❌ PDF generation failed:', err);
-    process.exit(1);
-});
 
 ================================================================================
 
@@ -1621,6 +1441,48 @@ FILE: vercel.json
 ================================================================================
 
 ================================================================================
+FILE: scripts\setup-indexes.js
+--------------------------------------------------------------------------------
+const clientPromise = require('../src/lib/database');
+
+async function setupIndexes() {
+    const client = await clientPromise;
+    const db = client.db('elitemarts');
+
+    console.log('Setting up indexes...');
+
+    try {
+        // Payment Sessions
+        await db.collection('payment_sessions').createIndex({ sessionId: 1 }, { unique: true });
+        await db.collection('payment_sessions').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+        await db.collection('payment_sessions').createIndex({ paymentStatus: 1 });
+        await db.collection('payment_sessions').createIndex({ createdAt: -1 });
+        await db.collection('payment_sessions').createIndex({ 'customerData.phone': 1 });
+
+        console.log('✅ Payment sessions indexes created');
+
+        // Orders
+        await db.collection('orders').createIndex({ orderId: 1 }, { unique: true });
+        await db.collection('orders').createIndex({ phone: 1 });
+        await db.collection('orders').createIndex({ paymentSessionId: 1 });
+        await db.collection('orders').createIndex({ createdAt: -1 });
+        await db.collection('orders').createIndex({ deliveryStatus: 1 });
+
+        console.log('✅ Orders indexes created');
+
+        console.log('✅ All indexes created successfully!');
+        process.exit(0);
+    } catch (error) {
+        console.error('Error creating indexes:', error);
+        process.exit(1);
+    }
+}
+
+setupIndexes().catch(console.error);
+
+================================================================================
+
+================================================================================
 FILE: src\app\globals.css
 --------------------------------------------------------------------------------
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Poppins:wght@400;500;600;700;800;900&display=swap');
@@ -2484,6 +2346,8 @@ import { sendTelegramNotification } from '@/lib/notifications';
 
 
 export async function POST(request) {
+    const startTime = Date.now();
+
     try {
         const { customer, pricing } = await request.json();
 
@@ -2492,7 +2356,7 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        // Generate unique Session ID
+        // Generate session ID
         const sessionId = `SESSION-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
 
         // Generate UPI payment URL
@@ -2500,21 +2364,23 @@ export async function POST(request) {
         const amount = 600;
         const upiUrl = `upi://pay?pa=${upiId}&pn=EliteMarts&am=${amount}&tn=Payment_${sessionId}&cu=INR`;
 
-        // Generate QR Code as base64
-        const qrCodeImage = await QRCode.toDataURL(upiUrl, {
-            width: 300,
-            margin: 2,
-            color: { dark: '#000000', light: '#FFFFFF' }
-        });
+        // Parallel operations: Generate QR, Instamojo URL simultaneously
+        const [qrCodeImage] = await Promise.all([
+            // QR Code generation
+            QRCode.toDataURL(upiUrl, {
+                width: 300,
+                margin: 2,
+                color: { dark: '#000000', light: '#FFFFFF' }
+            })
+        ]);
 
-        // Generate Instamojo payment URL
+        // Construct Instamojo URL (no async needed)
         const instamojoBaseUrl = process.env.INSTAMOJO_LINK || 'https://imjo.in/Hvu4ws';
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
         const returnUrl = `${appUrl}/success`;
-
         const instamojoUrl = `${instamojoBaseUrl}?amount=600&purpose=BOOKING_FEE&order_id=${sessionId}&buyer_name=${encodeURIComponent(customer.name)}&phone=${customer.phone}&redirect_url=${encodeURIComponent(returnUrl)}`;
 
-        // Create payment session document
+        // Prepare session document
         const sessionDoc = {
             sessionId,
             customerData: {
@@ -2539,49 +2405,48 @@ export async function POST(request) {
                 upiId,
                 amount,
                 data: upiUrl,
-                expiresAt: new Date(Date.now() + 15 * 60 * 1000) // 15 minutes expiry
+                expiresAt: new Date(Date.now() + 15 * 60 * 1000)
             },
-            instamojoUrl, // Add Instamojo URL
-            paymentStatus: 'pending', // pending, verified, failed, expired
-            orderId: null, // Will be set after order creation
+            instamojoUrl,
+            paymentStatus: 'pending',
+            orderId: null,
             createdAt: new Date(),
             expiresAt: new Date(Date.now() + 15 * 60 * 1000)
         };
 
-        // Save to MongoDB with indexes for performance
+        // Save to DB and send Telegram notification in parallel
         const client = await clientPromise;
         const db = client.db('elitemarts');
 
-        // Create indexes (safe to call multiple times)
-        await db.collection('payment_sessions').createIndex({ sessionId: 1 }, { unique: true });
-        await db.collection('payment_sessions').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-        await db.collection('payment_sessions').createIndex({ paymentStatus: 1 });
+        // Parallel DB save and Telegram notification
+        await Promise.all([
+            db.collection('payment_sessions').insertOne(sessionDoc),
+            sendTelegramNotification({
+                sessionId,
+                customer,
+                amount,
+                qrCode: sessionDoc.qrCode,
+                orderId: sessionId
+            }).catch(err => console.error('Telegram notification failed:', err))
+        ]);
 
-        await db.collection('payment_sessions').insertOne(sessionDoc);
+        const endTime = Date.now();
+        console.log(`Payment session created in ${endTime - startTime}ms`);
 
-        // 🚨 SEND INSTANT TELEGRAM NOTIFICATION TO ADMIN
-        await sendTelegramNotification({
-            sessionId,
-            customer,
-            amount,
-            qrCode: sessionDoc.qrCode
-        });
-
-        // Return session data
         return NextResponse.json({
             success: true,
             sessionId,
             qrCode: sessionDoc.qrCode,
-            instamojoUrl, // Return Instamojo URL
+            instamojoUrl,
             customerData: sessionDoc.customerData,
             expiresAt: sessionDoc.expiresAt,
             message: 'Payment session created successfully'
         });
 
     } catch (error) {
-        console.error('Payment session creation error:', error);
+        console.error('Session creation error:', error);
         return NextResponse.json(
-            { error: 'Failed to create payment session', details: error.message },
+            { error: 'Failed to create session', details: error.message },
             { status: 500 }
         );
     }
@@ -2589,24 +2454,27 @@ export async function POST(request) {
 
 // GET endpoint to check session status
 export async function GET(request) {
+    const { searchParams } = new URL(request.url);
+    const sessionId = searchParams.get('sessionId');
+
+    if (!sessionId) {
+        return NextResponse.json({ error: 'Session ID required' }, { status: 400 });
+    }
+
     try {
-        const { searchParams } = new URL(request.url);
-        const sessionId = searchParams.get('sessionId');
-
-        if (!sessionId) {
-            return NextResponse.json({ error: 'Session ID required' }, { status: 400 });
-        }
-
         const client = await clientPromise;
         const db = client.db('elitemarts');
 
-        const session = await db.collection('payment_sessions').findOne({ sessionId });
+        const session = await db.collection('payment_sessions').findOne(
+            { sessionId },
+            { projection: { paymentStatus: 1, orderId: 1, expiresAt: 1, qrCode: 1 } }
+        );
 
         if (!session) {
             return NextResponse.json({ error: 'Session not found' }, { status: 404 });
         }
 
-        // Check if expired
+        // Check expiration
         if (new Date() > new Date(session.expiresAt) && session.paymentStatus === 'pending') {
             await db.collection('payment_sessions').updateOne(
                 { sessionId },
@@ -2627,8 +2495,7 @@ export async function GET(request) {
         });
 
     } catch (error) {
-        console.error('Session status check error:', error);
-        return NextResponse.json({ error: 'Failed to check session status' }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to check status' }, { status: 500 });
     }
 }
 
@@ -3197,8 +3064,9 @@ FILE: src\app\track\page.js
 --------------------------------------------------------------------------------
 'use client';
 
-import { useState } from 'react';
-import { Search, Package, Truck, CheckCircle, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, Package, Truck, CheckCircle, Clock, CreditCard, Wallet } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function OrderTrackingPage() {
     const [searchQuery, setSearchQuery] = useState('');
@@ -3237,34 +3105,54 @@ export default function OrderTrackingPage() {
         }
     };
 
-    const getStatusIcon = (status) => {
-        switch (status) {
-            case 'processing':
-                return <Clock className="w-6 h-6 text-blue-500" />;
-            case 'shipped':
-                return <Package className="w-6 h-6 text-purple-500" />;
-            case 'out_for_delivery':
-                return <Truck className="w-6 h-6 text-orange-500" />;
-            case 'delivered':
-                return <CheckCircle className="w-6 h-6 text-green-500" />;
-            default:
-                return <Clock className="w-6 h-6 text-gray-500" />;
-        }
+    // Auto-refresh order data every 30 seconds
+    useEffect(() => {
+        if (!orderData) return;
+
+        const refreshInterval = setInterval(async () => {
+            try {
+                const response = await fetch(`/api/order/track?orderId=${orderData.orderId}`);
+                const data = await response.json();
+                if (data.success) {
+                    setOrderData(data.order);
+                }
+            } catch (err) {
+                console.error('Auto-refresh failed:', err);
+            }
+        }, 30000); // 30 seconds
+
+        return () => clearInterval(refreshInterval);
+    }, [orderData]);
+
+    const getDeliveryStages = () => {
+        const stages = [
+            { id: 'processing', label: 'Processing', icon: Clock },
+            { id: 'shipped', label: 'Shipped', icon: Package },
+            { id: 'out_for_delivery', label: 'Out for Delivery', icon: Truck },
+            { id: 'delivered', label: 'Delivered', icon: CheckCircle }
+        ];
+
+        const currentIndex = stages.findIndex(s => s.id === orderData?.deliveryStatus);
+        return stages.map((stage, index) => ({
+            ...stage,
+            isActive: index <= currentIndex,
+            isCurrent: index === currentIndex
+        }));
     };
 
-    const getStatusText = (status) => {
-        switch (status) {
-            case 'processing':
-                return 'Order is being processed';
-            case 'shipped':
-                return 'Order has been shipped';
-            case 'out_for_delivery':
-                return 'Out for delivery';
-            case 'delivered':
-                return 'Delivered successfully';
-            default:
-                return 'Unknown status';
-        }
+    const calculateProgress = () => {
+        const stages = ['processing', 'shipped', 'out_for_delivery', 'delivered'];
+        const currentIndex = stages.indexOf(orderData?.deliveryStatus || 'processing');
+        return ((currentIndex + 1) / stages.length) * 100;
+    };
+
+    const getDaysElapsed = () => {
+        if (!orderData?.createdAt) return 0;
+        const created = new Date(orderData.createdAt);
+        const now = new Date();
+        const diffTime = Math.abs(now - created);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        return Math.min(diffDays, 6);
     };
 
     return (
@@ -3301,134 +3189,207 @@ export default function OrderTrackingPage() {
 
                 {/* Error Message */}
                 {error && (
-                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700"
+                    >
                         {error}
-                    </div>
+                    </motion.div>
                 )}
 
                 {/* Order Details */}
-                {orderData && (
-                    <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6">
-                        {/* Order Header */}
-                        <div className="border-b pb-6">
-                            <div className="flex justify-between items-start mb-4">
-                                <div>
-                                    <h2 className="text-2xl font-bold text-gray-900 mb-1">Order Details</h2>
-                                    <p className="text-gray-600">Order ID: <span className="font-mono font-semibold">{orderData.orderId}</span></p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm text-gray-600">Order Date</p>
-                                    <p className="font-semibold">{new Date(orderData.createdAt).toLocaleDateString()}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Delivery Status */}
-                        <div>
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-semibold text-gray-900">Delivery Status</h3>
-                                <div className="flex items-center gap-2">
-                                    {getStatusIcon(orderData.deliveryStatus)}
-                                    <span className="font-medium text-gray-700">{getStatusText(orderData.deliveryStatus)}</span>
+                <AnimatePresence>
+                    {orderData && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white rounded-2xl shadow-xl p-8 space-y-6"
+                        >
+                            {/* Order Header */}
+                            <div className="border-b pb-6">
+                                <div className="flex justify-between items-start mb-4">
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-gray-900 mb-1">Order Details</h2>
+                                        <p className="text-gray-600">Order ID: <span className="font-mono font-semibold">{orderData.orderId}</span></p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm text-gray-600">Order Date</p>
+                                        <p className="font-semibold">{new Date(orderData.createdAt).toLocaleDateString('en-IN')}</p>
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Progress Bar */}
-                            <div className="relative">
-                                <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all duration-1000 ease-out"
-                                        style={{ width: `${orderData.progressPercentage}%` }}
-                                    />
-                                </div>
-                                <p className="text-sm text-gray-600 mt-2 text-center">
-                                    {orderData.progressPercentage}% Complete
-                                </p>
-                            </div>
-
-                            {/* Status Steps */}
-                            <div className="grid grid-cols-4 gap-2 mt-6">
-                                {['processing', 'shipped', 'out_for_delivery', 'delivered'].map((status, index) => {
-                                    const isActive = ['processing', 'shipped', 'out_for_delivery', 'delivered'].indexOf(orderData.deliveryStatus) >= index;
-                                    return (
-                                        <div key={status} className="text-center">
-                                            <div className={`w-3 h-3 rounded-full mx-auto mb-2 ${isActive ? 'bg-purple-600' : 'bg-gray-300'}`} />
-                                            <p className={`text-xs ${isActive ? 'text-purple-600 font-semibold' : 'text-gray-400'}`}>
-                                                {status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                            </p>
+                            {/* Payment Status Section */}
+                            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                    <CreditCard className="w-5 h-5 text-green-600" />
+                                    Payment Status
+                                </h3>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    {/* Prepaid Amount */}
+                                    <div className="bg-white rounded-lg p-4 border-2 border-green-500">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-sm font-medium text-gray-600">Prepaid Amount</span>
+                                            <span className="px-3 py-1 bg-green-500 text-white text-xs font-bold rounded-full">
+                                                PAID ✓
+                                            </span>
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
+                                        <p className="text-3xl font-bold text-green-600">₹600</p>
+                                        <p className="text-xs text-gray-500 mt-1">Payment Method: {orderData.paymentMethod || 'UPI/Online'}</p>
+                                    </div>
 
-                        {/* Estimated Delivery */}
-                        {orderData.estimatedDelivery && (
-                            <div className="bg-blue-50 rounded-lg p-4">
-                                <p className="text-sm text-blue-900 font-medium mb-1">Estimated Delivery</p>
-                                <p className="text-2xl font-bold text-blue-700">{orderData.estimatedDelivery.days}</p>
-                                <p className="text-sm text-blue-600 mt-1">
-                                    Expected: {new Date(orderData.estimatedDelivery.start).toLocaleDateString()} - {new Date(orderData.estimatedDelivery.end).toLocaleDateString()}
-                                </p>
-                            </div>
-                        )}
-
-                        {/* Customer Details */}
-                        <div className="grid md:grid-cols-2 gap-6 pt-6 border-t">
-                            <div>
-                                <h4 className="font-semibold text-gray-900 mb-3">Customer Information</h4>
-                                <div className="space-y-2 text-sm">
-                                    <p><span className="text-gray-600">Name:</span> <span className="font-medium">{orderData.customerName}</span></p>
-                                    <p><span className="text-gray-600">Phone:</span> <span className="font-medium">{orderData.phone}</span></p>
-                                </div>
-                            </div>
-                            <div>
-                                <h4 className="font-semibold text-gray-900 mb-3">Delivery Address</h4>
-                                <p className="text-sm text-gray-700">
-                                    {orderData.address.street}, {orderData.address.city}, {orderData.address.state} - {orderData.address.pincode}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Payment Details */}
-                        <div className="bg-green-50 rounded-lg p-4">
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <p className="text-sm text-green-900 font-medium">Payment Status</p>
-                                    <p className="text-lg font-bold text-green-700">Paid ✓</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm text-green-900">Amount Paid</p>
-                                    <p className="text-2xl font-bold text-green-700">₹{orderData.pricing.prepaidAmount}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Tracking History */}
-                        {orderData.trackingHistory && orderData.trackingHistory.length > 0 && (
-                            <div className="pt-6 border-t">
-                                <h4 className="font-semibold text-gray-900 mb-4">Tracking History</h4>
-                                <div className="space-y-3">
-                                    {orderData.trackingHistory.map((event, index) => (
-                                        <div key={index} className="flex gap-3">
-                                            <div className="w-2 h-2 rounded-full bg-purple-600 mt-2" />
-                                            <div className="flex-1">
-                                                <p className="font-medium text-gray-900">{event.message}</p>
-                                                <p className="text-sm text-gray-600">{new Date(event.timestamp).toLocaleString()}</p>
-                                            </div>
+                                    {/* COD Balance */}
+                                    <div className="bg-white rounded-lg p-4 border-2 border-orange-400">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="text-sm font-medium text-gray-600">Balance (COD)</span>
+                                            <span className="px-3 py-1 bg-orange-400 text-white text-xs font-bold rounded-full">
+                                                {orderData.deliveryStatus === 'delivered' ? 'PAID ✓' : 'PENDING'}
+                                            </span>
                                         </div>
-                                    ))}
+                                        <p className="text-3xl font-bold text-orange-600">₹{orderData.pricing?.balanceDue || 599}</p>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            {orderData.deliveryStatus === 'delivered' ? 'Paid on delivery' : 'Pay on delivery'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Total Amount */}
+                                <div className="mt-4 pt-4 border-t border-green-200">
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-lg font-semibold text-gray-700">Total Order Value:</span>
+                                        <span className="text-2xl font-bold text-gray-900">₹{orderData.pricing?.finalPrice || 1199}</span>
+                                    </div>
                                 </div>
                             </div>
-                        )}
-                    </div>
-                )}
+
+                            {/* Delivery Status with Animation */}
+                            <div>
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">Delivery Progress</h3>
+
+                                {/* Animated Progress Bar */}
+                                <div className="mb-6">
+                                    <div className="relative h-4 bg-gray-200 rounded-full overflow-hidden">
+                                        <motion.div
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${calculateProgress()}%` }}
+                                            transition={{ duration: 1, ease: "easeOut" }}
+                                            className="h-full bg-gradient-to-r from-purple-500 via-blue-500 to-green-500 rounded-full"
+                                        />
+                                    </div>
+                                    <p className="text-sm text-gray-600 mt-2 text-center font-medium">
+                                        {calculateProgress().toFixed(0)}% Complete • Day {getDaysElapsed()} of 4-6
+                                    </p>
+                                </div>
+
+                                {/* Delivery Stages */}
+                                <div className="grid grid-cols-4 gap-2">
+                                    {getDeliveryStages().map((stage, index) => {
+                                        const Icon = stage.icon;
+                                        return (
+                                            <motion.div
+                                                key={stage.id}
+                                                initial={{ opacity: 0, y: 20 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: index * 0.1 }}
+                                                className="text-center"
+                                            >
+                                                <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-all ${stage.isActive
+                                                        ? 'bg-purple-600 text-white scale-110'
+                                                        : 'bg-gray-200 text-gray-400'
+                                                    }`}>
+                                                    <Icon className="w-6 h-6" />
+                                                </div>
+                                                <p className={`text-xs font-medium ${stage.isActive ? 'text-purple-600' : 'text-gray-400'
+                                                    }`}>
+                                                    {stage.label}
+                                                </p>
+                                                {stage.isCurrent && (
+                                                    <motion.div
+                                                        initial={{ scale: 0 }}
+                                                        animate={{ scale: 1 }}
+                                                        className="mt-1"
+                                                    >
+                                                        <span className="inline-block px-2 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded">
+                                                            Current
+                                                        </span>
+                                                    </motion.div>
+                                                )}
+                                            </motion.div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Estimated Delivery */}
+                            {orderData.estimatedDelivery && (
+                                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                                    <p className="text-sm text-blue-900 font-medium mb-1">Estimated Delivery</p>
+                                    <p className="text-2xl font-bold text-blue-700">{orderData.estimatedDelivery.days}</p>
+                                    <p className="text-sm text-blue-600 mt-1">
+                                        Expected: {new Date(orderData.estimatedDelivery.start).toLocaleDateString('en-IN')} - {new Date(orderData.estimatedDelivery.end).toLocaleDateString('en-IN')}
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Customer Details */}
+                            <div className="grid md:grid-cols-2 gap-6 pt-6 border-t">
+                                <div>
+                                    <h4 className="font-semibold text-gray-900 mb-3">Customer Information</h4>
+                                    <div className="space-y-2 text-sm">
+                                        <p><span className="text-gray-600">Name:</span> <span className="font-medium">{orderData.customerName}</span></p>
+                                        <p><span className="text-gray-600">Phone:</span> <span className="font-medium">{orderData.phone}</span></p>
+                                        {orderData.email && (
+                                            <p><span className="text-gray-600">Email:</span> <span className="font-medium">{orderData.email}</span></p>
+                                        )}
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold text-gray-900 mb-3">Delivery Address</h4>
+                                    <p className="text-sm text-gray-700">
+                                        {orderData.address.street}, {orderData.address.city}, {orderData.address.state} - {orderData.address.pincode}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Tracking History */}
+                            {orderData.trackingHistory && orderData.trackingHistory.length > 0 && (
+                                <div className="pt-6 border-t">
+                                    <h4 className="font-semibold text-gray-900 mb-4">Tracking History</h4>
+                                    <div className="space-y-3">
+                                        {orderData.trackingHistory.map((event, index) => (
+                                            <motion.div
+                                                key={index}
+                                                initial={{ opacity: 0, x: -20 }}
+                                                animate={{ opacity: 1, x: 0 }}
+                                                transition={{ delay: index * 0.1 }}
+                                                className="flex gap-3"
+                                            >
+                                                <div className="w-2 h-2 rounded-full bg-purple-600 mt-2 flex-shrink-0" />
+                                                <div className="flex-1">
+                                                    <p className="font-medium text-gray-900">{event.message}</p>
+                                                    <p className="text-sm text-gray-600">{new Date(event.timestamp).toLocaleString('en-IN')}</p>
+                                                </div>
+                                            </motion.div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Auto-refresh indicator */}
+                            <div className="text-center text-xs text-gray-500 pt-4 border-t">
+                                <p>🔄 Auto-refreshing every 30 seconds for real-time updates</p>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {/* Help Section */}
                 {!orderData && !loading && (
                     <div className="text-center mt-12 text-gray-600">
                         <p className="mb-2">Need help?</p>
-                        <p className="text-sm">Contact us at <a href="tel:+918607832386" className="text-purple-600 hover:underline">+91 8607832386</a></p>
+                        <p className="text-sm">Contact us at <a href="tel:+918607832386" className="text-purple-600 hover:underline font-medium">+91 8607832386</a></p>
                     </div>
                 )}
             </div>
@@ -4479,9 +4440,9 @@ FILE: src\components\OrderLookup.jsx
 --------------------------------------------------------------------------------
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Search, Package, CheckCircle, Clock, XCircle, RefreshCw, Download } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Package, CheckCircle, Clock, XCircle, RefreshCw, Download, MapPin, Phone, CreditCard } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { generateClientInvoice } from '@/lib/clientInvoice';
 
@@ -4491,31 +4452,29 @@ export default function OrderLookup() {
     const [orderData, setOrderData] = useState(null);
     const [pollingInterval, setPollingInterval] = useState(null);
 
-    // Auto-check effect
+    // Note: Removed auto-loading to prevent showing order on every refresh
+    // Order will only display when user manually searches
+
+
+    // Clean up polling on unmount
     useEffect(() => {
         return () => {
             if (pollingInterval) clearInterval(pollingInterval);
         };
     }, [pollingInterval]);
 
-    const startPolling = (id) => {
-        if (pollingInterval) clearInterval(pollingInterval);
-
-        const interval = setInterval(() => {
-            checkStatus(id, true);
-        }, 10000); // 10 seconds
-
-        setPollingInterval(interval);
-    };
-
-    const stopPolling = () => {
-        if (pollingInterval) {
-            clearInterval(pollingInterval);
-            setPollingInterval(null);
+    const getStatusIcon = (status, paymentStatus) => {
+        const baseClass = "w-8 h-8";
+        if (paymentStatus === 'verified' || paymentStatus === 'paid') {
+            return <CheckCircle className={`${baseClass} text-green-500`} />;
         }
+        if (paymentStatus === 'failed') {
+            return <XCircle className={`${baseClass} text-red-500`} />;
+        }
+        return <Clock className={`${baseClass} text-yellow-500 animate-pulse`} />;
     };
 
-    const checkStatus = async (id, isAuto = false) => {
+    const checkStatus = useCallback(async (id, isAuto = false) => {
         try {
             const response = await fetch(`/api/order/status?orderId=${id}`);
             const data = await response.json();
@@ -4523,167 +4482,305 @@ export default function OrderLookup() {
             if (response.ok && data.order) {
                 setOrderData(data.order);
 
-                // If verified/paid, stop polling and show success toast (only once)
-                if (data.order.paymentStatus === 'verified' || data.order.status === 'paid') {
-                    if (isAuto) toast.success('Payment Verified! ✅');
-                    stopPolling();
+                // Stop polling if verified
+                if (data.order.paymentStatus === 'verified' || data.order.paymentStatus === 'paid') {
+                    if (pollingInterval) {
+                        clearInterval(pollingInterval);
+                        setPollingInterval(null);
+                    }
+                    if (isAuto) {
+                        toast.success('Payment Verified! ✅', { duration: 3000 });
+                    }
                 }
+                return true;
             } else if (!isAuto) {
                 toast.error('Order not found');
                 setOrderData(null);
             }
+            return false;
         } catch (error) {
             console.error('Status check failed:', error);
             if (!isAuto) toast.error('Failed to check status');
+            return false;
         }
-    };
+    }, [pollingInterval]);
 
-    const handleLookup = async (e) => {
-        e.preventDefault();
+    const startPolling = useCallback((id) => {
+        if (pollingInterval) clearInterval(pollingInterval);
 
-        if (!orderId.trim()) {
-            toast.error('Please enter an Order ID');
+        const interval = setInterval(() => {
+            checkStatus(id, true);
+        }, 5000); // Check every 5 seconds
+
+        setPollingInterval(interval);
+    }, [pollingInterval, checkStatus]);
+
+    const handleLookup = async (e, predefinedId = null) => {
+        if (e) e.preventDefault();
+
+        const searchId = predefinedId || orderId.trim();
+        if (!searchId) {
+            toast.error('Please enter Order ID');
             return;
         }
 
         setLoading(true);
-        // Clear previous state
-        stopPolling();
-        setOrderData(null);
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+            setPollingInterval(null);
+        }
 
-        await checkStatus(orderId.trim());
-
-        // Start polling if order found and pending
-        startPolling(orderId.trim());
+        const found = await checkStatus(searchId, false);
+        if (found) {
+            startPolling(searchId);
+        }
 
         setLoading(false);
     };
 
     const handleDownloadInvoice = async () => {
         if (!orderData) return;
-
         try {
             await generateClientInvoice(orderData);
-            toast.success('Invoice downloaded successfully!');
+            toast.success('Invoice downloaded!');
         } catch (error) {
-            console.error('Invoice error:', error);
-            toast.error('Failed to generate invoice');
+            toast.error('Failed to download invoice');
         }
     };
 
-    const getStatusIcon = (status, paymentStatus) => {
-        if (paymentStatus === 'verified' || status === 'paid') {
-            return <CheckCircle className="text-green-500" size={32} />;
+    // Animated progress calculation with automatic status updates
+    const getDeliveryProgress = () => {
+        if (!orderData?.createdAt) return { progress: 0, text: 'Processing', status: 'processing' };
+
+        // Calculate days since order creation
+        const daysSinceOrder = Math.floor((Date.now() - new Date(orderData.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+
+        // Auto-update delivery status based on days
+        // Day 0-1: Processing, Day 2-3: Shipped, Day 4-5: Out for Delivery, Day 6+: Delivered
+        let currentStatus = 'processing';
+        if (daysSinceOrder >= 6) {
+            currentStatus = 'delivered';
+        } else if (daysSinceOrder >= 4) {
+            currentStatus = 'out_for_delivery';
+        } else if (daysSinceOrder >= 2) {
+            currentStatus = 'shipped';
         }
-        if (paymentStatus === 'failed') {
-            return <XCircle className="text-red-500" size={32} />;
-        }
-        return <Clock className="text-yellow-500" size={32} />;
+
+        const progressMap = {
+            'processing': { progress: 25, text: 'Order Confirmed', status: 'processing' },
+            'shipped': { progress: 50, text: 'Shipped', status: 'shipped' },
+            'out_for_delivery': { progress: 75, text: 'Out for Delivery', status: 'out_for_delivery' },
+            'delivered': { progress: 100, text: 'Delivered', status: 'delivered' }
+        };
+
+        return progressMap[currentStatus] || { progress: 0, text: 'Processing', status: 'processing' };
+    };
+
+    // Delivery status with animation
+    const DeliveryStatus = () => {
+        const { progress, text, status } = getDeliveryProgress();
+        const daysSinceOrder = Math.floor((Date.now() - new Date(orderData.createdAt).getTime()) / (1000 * 60 * 60 * 24));
+        const daysRemaining = Math.max(0, 6 - daysSinceOrder);
+
+        return (
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-6 border-2 border-blue-200"
+            >
+                <h3 className="text-lg font-bold text-blue-900 mb-4">📦 Delivery Status</h3>
+
+                {/* Progress Bar */}
+                <div className="relative mb-4">
+                    <div className="h-4 bg-gray-200 rounded-full overflow-hidden">
+                        <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progress}%` }}
+                            transition={{ duration: 1, ease: "easeOut" }}
+                            className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full"
+                        />
+                    </div>
+                    <motion.div
+                        initial={{ x: '-50%', opacity: 0 }}
+                        animate={{ x: '-50%', opacity: 1 }}
+                        className="absolute top-6 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold"
+                    >
+                        {progress}% Complete
+                    </motion.div>
+                </div>
+
+                {/* Status Steps */}
+                <div className="grid grid-cols-4 gap-2 mb-4">
+                    {['processing', 'shipped', 'out_for_delivery', 'delivered'].map((stepStatus, idx) => {
+                        const isActive = ['processing', 'shipped', 'out_for_delivery', 'delivered'].indexOf(status) >= idx;
+                        return (
+                            <div key={stepStatus} className="text-center">
+                                <motion.div
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: isActive ? 1 : 0.8 }}
+                                    className={`w-3 h-3 rounded-full mx-auto mb-2 ${isActive ? 'bg-blue-600' : 'bg-gray-300'}`}
+                                />
+                                <p className={`text-xs ${isActive ? 'text-blue-600 font-semibold' : 'text-gray-400'}`}>
+                                    {stepStatus.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                </p>
+                            </div>
+                        );
+                    })}
+                </div>
+
+                <p className="text-center text-blue-800 font-medium">{text}</p>
+                <p className="text-center text-sm text-blue-600 mt-1">
+                    {progress < 100 ? `Estimated delivery in ${daysRemaining} days` : 'Delivered successfully!'}
+                </p>
+            </motion.div>
+        );
     };
 
     return (
-        <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-xl border-2 border-indigo-100 max-w-2xl mx-auto">
-            <div className="text-center mb-6 sm:mb-8">
-                <Package className="mx-auto mb-4 text-indigo-600" size={40} />
-                <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Check Order Status</h2>
-                <p className="text-gray-600 text-sm sm:text-base px-4">Enter your Order ID to check real-time status</p>
+        <div className="bg-white rounded-3xl shadow-2xl p-6 md:p-8 max-w-4xl mx-auto border-2 border-indigo-100">
+            <div className="text-center mb-8">
+                <Package className="mx-auto mb-3 text-indigo-600" size={40} />
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">Track Your Order</h2>
+                <p className="text-gray-600">Search by Order ID to see payment & delivery status</p>
             </div>
 
-            <form onSubmit={handleLookup} className="mb-6 sm:mb-8">
-                <div className="flex flex-col sm:flex-row gap-3">
-                    <input
-                        type="text"
-                        value={orderId}
-                        onChange={(e) => setOrderId(e.target.value.toUpperCase())}
-                        placeholder="ELITE-XXXXXX"
-                        className="flex-1 px-4 sm:px-6 py-3 sm:py-4 border-2 border-gray-300 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all text-base sm:text-lg font-mono uppercase"
-                    />
+            <form onSubmit={handleLookup} className="mb-8">
+                <div className="flex flex-col md:flex-row gap-3">
+                    <div className="flex-1 relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+                        <input
+                            type="text"
+                            value={orderId}
+                            onChange={(e) => setOrderId(e.target.value.toUpperCase())}
+                            placeholder="Enter Order ID (e.g., ELITE-12345)"
+                            className="w-full pl-10 pr-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 outline-none transition-all font-mono"
+                        />
+                    </div>
                     <button
                         type="submit"
                         disabled={loading}
-                        className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 sm:px-8 py-3 sm:py-4 rounded-2xl font-bold hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 shadow-lg flex items-center justify-center gap-2 text-base sm:text-lg"
+                        className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-3 rounded-xl font-bold hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg"
                     >
                         <Search size={20} />
-                        {loading ? 'Searching...' : 'Check Status'}
+                        {loading ? <RefreshCw size={20} className="animate-spin" /> : 'Search'}
                     </button>
                 </div>
             </form>
 
-            {orderData && (
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`p-4 sm:p-6 rounded-2xl border-2 ${orderData.paymentStatus === 'verified' || orderData.status === 'paid'
-                            ? 'border-green-200 bg-green-50'
+            <AnimatePresence>
+                {orderData && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="space-y-6"
+                    >
+                        {/* Status Header */}
+                        <div className={`p-6 rounded-2xl border-2 ${orderData.paymentStatus === 'verified' || orderData.paymentStatus === 'paid'
+                            ? 'bg-green-50 border-green-200'
                             : orderData.paymentStatus === 'failed'
-                                ? 'border-red-200 bg-red-50'
-                                : 'border-yellow-200 bg-yellow-50'
-                        }`}
-                >
-                    <div className="flex items-start gap-4 mb-6">
-                        {getStatusIcon(orderData.status, orderData.paymentStatus)}
-                        <div className="flex-1">
-                            <h3 className="text-xl font-bold text-gray-900 mb-1">
-                                Order #{orderData.orderId}
-                            </h3>
-                            <div className="flex items-center gap-2">
-                                <span className={`font-semibold ${orderData.paymentStatus === 'verified' || orderData.status === 'paid' ? 'text-green-600' : 'text-yellow-600'
-                                    }`}>
-                                    {orderData.paymentStatus === 'verified' || orderData.status === 'paid'
-                                        ? 'Payment Verified ✅'
-                                        : 'Verification Pending ⏳'}
-                                </span>
-                                {pollingInterval && (
-                                    <span className="flex items-center gap-1 text-xs text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full animate-pulse">
-                                        <RefreshCw size={12} className="animate-spin" />
-                                        Updating...
-                                    </span>
-                                )}
+                                ? 'bg-red-50 border-red-200'
+                                : 'bg-yellow-50 border-yellow-200'
+                            }`}>
+                            <div className="flex items-center gap-4">
+                                {getStatusIcon(orderData.status, orderData.paymentStatus)}
+                                <div>
+                                    <h3 className="text-xl font-bold text-gray-900">Order #{orderData.orderId}</h3>
+                                    <p className="font-semibold">
+                                        {orderData.paymentStatus === 'verified' || orderData.paymentStatus === 'paid'
+                                            ? '✅ Payment Verified'
+                                            : orderData.paymentStatus === 'failed'
+                                                ? '❌ Payment Failed'
+                                                : '⏳ Verification Pending'}
+                                    </p>
+                                    {pollingInterval && (
+                                        <p className="text-sm text-indigo-600 flex items-center gap-1 mt-1">
+                                            <RefreshCw size={14} className="animate-spin" />
+                                            Auto-updating every 5 seconds...
+                                        </p>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div className="space-y-3 text-sm border-t border-b border-gray-200 py-4 my-4">
-                        <div className="flex justify-between">
-                            <span className="text-gray-600">Customer:</span>
-                            <span className="font-semibold">{orderData.customerName}</span>
+                        {/* Customer Details */}
+                        <div className="bg-gray-50 rounded-2xl p-6 border-2 border-gray-200">
+                            <h4 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                <MapPin size={20} className="text-indigo-600" />
+                                Customer & Delivery Details
+                            </h4>
+                            <div className="grid md:grid-cols-2 gap-4 text-sm">
+                                <div>
+                                    <p className="text-gray-600">Name:</p>
+                                    <p className="font-semibold">{orderData.customerName}</p>
+                                </div>
+                                <div>
+                                    <p className="text-gray-600">Phone:</p>
+                                    <p className="font-semibold">{orderData.phone}</p>
+                                </div>
+                                <div className="md:col-span-2">
+                                    <p className="text-gray-600">Delivery Address:</p>
+                                    <p className="font-semibold">{orderData.address ?
+                                        (typeof orderData.address === 'object'
+                                            ? `${orderData.address.street}, ${orderData.address.city}, ${orderData.address.state} - ${orderData.address.pincode}`
+                                            : orderData.address)
+                                        : 'N/A'}</p>
+                                </div>
+                            </div>
                         </div>
-                        <div className="flex justify-between">
-                            <span className="text-gray-600">Amount:</span>
-                            <span className="font-semibold">₹{orderData.pricing?.finalPrice}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-gray-600">Date:</span>
-                            <span className="font-semibold">
-                                {new Date(orderData.createdAt).toLocaleDateString()}
-                            </span>
-                        </div>
-                    </div>
 
-                    {(orderData.paymentStatus === 'verified' || orderData.status === 'paid') ? (
-                        <div className="mt-4">
+                        {/* Payment Breakdown */}
+                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl p-6 border-2 border-green-200">
+                            <h4 className="font-bold text-green-900 mb-4 flex items-center gap-2">
+                                <CreditCard size={20} className="text-green-600" />
+                                Payment Details
+                            </h4>
+                            <div className="space-y-3">
+                                <div className="flex justify-between">
+                                    <span className="text-gray-700">Prepaid Amount (Paid):</span>
+                                    <span className="font-bold text-green-600">₹600.00 ✅</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-gray-700">Balance (COD):</span>
+                                    <span className="font-bold text-orange-600">₹599.00</span>
+                                </div>
+                                <div className="border-t border-green-300 pt-3">
+                                    <div className="flex justify-between">
+                                        <span className="font-bold text-gray-900">Total Order Value:</span>
+                                        <span className="font-bold text-xl text-green-700">₹1199.00</span>
+                                    </div>
+                                </div>
+                                <p className="text-xs text-green-700 mt-2">
+                                    💡 Pay ₹599 cash to delivery partner when your order arrives
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Delivery Status */}
+                        <DeliveryStatus />
+
+                        {/* Action Button */}
+                        {(orderData.paymentStatus === 'verified' || orderData.paymentStatus === 'paid') && (
                             <button
                                 onClick={handleDownloadInvoice}
-                                className="w-full bg-green-600 text-white py-3 rounded-xl font-bold hover:bg-green-700 transition-all flex items-center justify-center gap-2 shadow-lg"
+                                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-4 rounded-xl font-bold hover:from-green-700 hover:to-emerald-700 transition-all flex items-center justify-center gap-2 shadow-lg"
                             >
                                 <Download size={20} />
-                                Download Invoice
+                                Download Official Invoice
                             </button>
-                            <p className="text-center text-xs text-green-700 mt-2">
-                                ✅ Your order is confirmed and will be shipped soon.
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="mt-4 text-center">
-                            <p className="text-sm text-yellow-800 font-medium mb-2">
-                                We are verifying your payment...
-                            </p>
-                            <p className="text-xs text-gray-500">
-                                This page refreshes automatically every 10 seconds.
-                            </p>
-                        </div>
-                    )}
-                </motion.div>
+                        )}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {!orderData && !loading && (
+                <div className="text-center text-gray-500 mt-8 p-6 bg-gray-50 rounded-xl">
+                    <p className="mb-2">No order found yet</p>
+                    <p className="text-sm">Enter your Order ID to check status</p>
+                    <p className="text-xs mt-2">
+                        Need help? <a href="https://www.instagram.com/elitemarts_" className="text-indigo-600 hover:underline">DM us on Instagram</a>
+                    </p>
+                </div>
             )}
         </div>
     );
@@ -4708,6 +4805,8 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
     const [copied, setCopied] = useState(false);
     const [checkingStatus, setCheckingStatus] = useState(false);
     const [instamojoUrl, setInstamojoUrl] = useState('');
+    const [timeRemaining, setTimeRemaining] = useState(180); // 3 minutes = 180 seconds
+    const [sessionExpired, setSessionExpired] = useState(false);
 
     const upiId = qrCodeData?.upiId || 'riya4862@airtel';
     const qrCodeImage = qrCodeData?.imageUrl;
@@ -4722,13 +4821,25 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
         }
     }, []);
 
-    // Auto-poll payment status every 3 seconds
+    // Auto-poll payment status with optimized timeout
     useEffect(() => {
         if (!sessionId || paymentState === 'verified' || paymentState === 'failed') return;
 
+        let isMounted = true;
+        let interval;
+
         const checkPaymentStatus = async () => {
             try {
-                const response = await fetch(`/api/payment/session?sessionId=${sessionId}`);
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 2000); // 2s timeout
+
+                const response = await fetch(`/api/payment/session?sessionId=${sessionId}`, {
+                    signal: controller.signal
+                });
+                clearTimeout(timeout);
+
+                if (!isMounted) return;
+
                 const data = await response.json();
 
                 if (data.success && data.session) {
@@ -4736,7 +4847,7 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
 
                     if (status === 'verified') {
                         setPaymentState('verified');
-                        toast.success('Payment verified! Creating your order... 🎉');
+                        toast.success('Payment verified! Creating your order... 🎉', { duration: 2000 });
 
                         // Trigger order creation
                         if (onPaymentVerified) {
@@ -4751,17 +4862,49 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
                     }
                 }
             } catch (error) {
-                console.error('Status check failed:', error);
+                if (error.name === 'AbortError') {
+                    console.log('Status check timed out, retrying...');
+                } else {
+                    console.error('Status check failed:', error);
+                }
             }
         };
 
         // Initial check
         checkPaymentStatus();
 
-        // Poll every 3 seconds (changed from 5)
-        const interval = setInterval(checkPaymentStatus, 3000);
-        return () => clearInterval(interval);
+        // Poll every 3 seconds for optimized performance
+        interval = setInterval(checkPaymentStatus, 3000);
+
+        return () => {
+            isMounted = false;
+            if (interval) clearInterval(interval);
+        };
     }, [sessionId, paymentState, onPaymentVerified]);
+
+    // 3-minute countdown timer
+    useEffect(() => {
+        if (paymentState === 'verified' || paymentState === 'failed' || sessionExpired) return;
+
+        const timer = setInterval(() => {
+            setTimeRemaining((prev) => {
+                if (prev <= 1) {
+                    // Timer expired
+                    clearInterval(timer);
+                    setSessionExpired(true);
+                    setPaymentState('expired');
+                    toast.error('Payment time expired! Please try again.', {
+                        duration: 5000,
+                        icon: '⏰'
+                    });
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [paymentState, sessionExpired]);
 
     const copyToClipboard = () => {
         navigator.clipboard.writeText(upiId);
@@ -4879,6 +5022,57 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
         }
     };
 
+    // Format time remaining as MM:SS
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    // Retry payment - generate new session with same customer data
+    const handleRetry = async () => {
+        setCheckingStatus(true);
+        toast.loading('Generating new payment session...', { id: 'retry-toast' });
+
+        try {
+            // Create new payment session with same customer data
+            const response = await fetch('/api/payment/session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customer: {
+                        name: customerData?.name,
+                        phone: customerData?.phone,
+                        address: customerData?.address?.street || customerData?.address,
+                        city: customerData?.address?.city || '',
+                        state: customerData?.address?.state || '',
+                        pincode: customerData?.address?.pincode || ''
+                    },
+                    pricing: pricing
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                toast.success('New payment session created! Timer reset to 3 minutes.', { id: 'retry-toast' });
+
+                // Reload page with new session to get fresh QR code
+                // This preserves the customer data in the new session
+                setTimeout(() => {
+                    window.location.href = `/payment?session=${data.sessionId}`;
+                }, 1000);
+            } else {
+                toast.error('Failed to create new session. Please try again.', { id: 'retry-toast' });
+                setCheckingStatus(false);
+            }
+        } catch (error) {
+            console.error('Retry error:', error);
+            toast.error('Failed to create new session. Please try again.', { id: 'retry-toast' });
+            setCheckingStatus(false);
+        }
+    };
+
     // Get status display info
     const getStatusInfo = () => {
         switch (paymentState) {
@@ -4942,13 +5136,117 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
                 <p className="text-sm text-gray-600">
                     ₹600 prepaid to order • ₹{pricing?.balanceDue || 599} Cash On Delivery
                 </p>
+
+                {/* Timer Display */}
+                {!sessionExpired && paymentState !== 'verified' && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`mt-4 p-3 rounded-xl border-2 ${timeRemaining > 60
+                            ? 'bg-green-50 border-green-300'
+                            : timeRemaining > 30
+                                ? 'bg-yellow-50 border-yellow-300'
+                                : 'bg-red-50 border-red-300 animate-pulse'
+                            }`}
+                    >
+                        <div className="flex items-center justify-center gap-2">
+                            <Clock className={`${timeRemaining > 60
+                                ? 'text-green-600'
+                                : timeRemaining > 30
+                                    ? 'text-yellow-600'
+                                    : 'text-red-600'
+                                }`} size={20} />
+                            <p className={`font-bold text-lg ${timeRemaining > 60
+                                ? 'text-green-700'
+                                : timeRemaining > 30
+                                    ? 'text-yellow-700'
+                                    : 'text-red-700'
+                                }`}>
+                                Time Remaining: {formatTime(timeRemaining)}
+                            </p>
+                        </div>
+                        <p className="text-xs text-center mt-1 text-gray-600">
+                            Complete payment within this time
+                        </p>
+                    </motion.div>
+                )}
             </div>
 
-            {/* Status Badge */}
-            <div className={`${statusInfo.color} border-2 rounded-xl p-3 mb-6 flex items-center justify-center gap-2`}>
+            {/* Expired Session - Retry UI */}
+            {sessionExpired && (
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="mb-6 bg-red-50 border-2 border-red-300 rounded-2xl p-6 text-center"
+                >
+                    <AlertCircle className="mx-auto mb-3 text-red-600" size={48} />
+                    <h3 className="text-xl font-bold text-red-900 mb-2">Payment Time Expired!</h3>
+                    <p className="text-red-700 mb-4">
+                        Your 3-minute payment window has expired. Please try again to get a new QR code.
+                    </p>
+                    <button
+                        onClick={handleRetry}
+                        className="bg-gradient-to-r from-red-600 to-pink-600 text-white px-8 py-3 rounded-xl font-bold hover:from-red-700 hover:to-pink-700 transition-all shadow-lg flex items-center justify-center gap-2 mx-auto"
+                    >
+                        <RefreshCw size={20} />
+                        Try Again - Get New QR Code
+                    </button>
+                </motion.div>
+            )}
+
+            {/* Status Badge with Animation */}
+            <motion.div
+                className={`${statusInfo.color} border-2 rounded-xl p-3 mb-6 flex items-center justify-center gap-2`}
+                animate={{ scale: paymentState === 'verifying' ? [1, 1.02, 1] : 1 }}
+                transition={{ repeat: paymentState === 'verifying' ? Infinity : 0, duration: 1.5 }}
+            >
                 {statusInfo.icon}
                 <span className="font-semibold text-sm md:text-base text-gray-800">{statusInfo.text}</span>
-            </div>
+            </motion.div>
+
+            {/* Processing Messages */}
+            {
+                (paymentState === 'submitted' || paymentState === 'verifying') && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-xl p-4"
+                    >
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                            <p className="text-sm font-semibold text-blue-900">Processing your payment...</p>
+                        </div>
+                        <div className="space-y-2 text-xs text-blue-700">
+                            <motion.p
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.5 }}
+                                className="flex items-center gap-2"
+                            >
+                                <span className="text-green-600">✓</span> Payment session created
+                            </motion.p>
+                            <motion.p
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 1 }}
+                                className="flex items-center gap-2"
+                            >
+                                <span className="text-green-600">✓</span> Admin notified instantly
+                            </motion.p>
+                            <motion.p
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 1.5 }}
+                                className="flex items-center gap-2"
+                            >
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                                Waiting for admin verification...
+                            </motion.p>
+                        </div>
+                        <p className="text-xs text-blue-600 mt-3 font-medium">⚡ Auto-checking every second for instant updates</p>
+                    </motion.div>
+                )
+            }
 
             {/* QR Code Section */}
             <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-3xl p-6 md:p-8 mb-6">
@@ -5021,24 +5319,28 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
             </button>
 
             {/* Desktop Message */}
-            {typeof window !== 'undefined' && !/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && (
-                <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-3 mb-4">
-                    <p className="text-sm text-yellow-800 text-center">
-                        📱 <strong>On Desktop?</strong> Scan the QR code below with your phone's UPI app
-                    </p>
-                </div>
-            )}
+            {
+                typeof window !== 'undefined' && !/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) && (
+                    <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-3 mb-4">
+                        <p className="text-sm text-yellow-800 text-center">
+                            📱 <strong>On Desktop?</strong> Scan the QR code below with your phone's UPI app
+                        </p>
+                    </div>
+                )
+            }
 
             {/* Instamojo Button - Secondary */}
-            {instamojoUrl && (
-                <button
-                    onClick={openInstamojo}
-                    className="w-full bg-white text-indigo-700 border-2 border-indigo-600 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 mb-6"
-                >
-                    <ExternalLink size={18} />
-                    Pay via Instamojo (Instant Auto-Verification)
-                </button>
-            )}
+            {
+                instamojoUrl && (
+                    <button
+                        onClick={openInstamojo}
+                        className="w-full bg-white text-indigo-700 border-2 border-indigo-600 py-3 rounded-xl font-semibold hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 mb-6"
+                    >
+                        <ExternalLink size={18} />
+                        Pay via Instamojo (Instant Auto-Verification)
+                    </button>
+                )
+            }
 
             {/* Info Box */}
             <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4">
@@ -5370,379 +5672,221 @@ FILE: src\lib\clientInvoice.js
 --------------------------------------------------------------------------------
 import autoTable from 'jspdf-autotable';
 
-// Professional color scheme
-const COLORS = {
-    primary: '#1e40af',    // EliteMarts Blue
-    secondary: '#f97316',  // Orange accent
-    dark: '#1f2937',       // Dark text
-    light: '#6b7280',      // Light text
-    border: '#e5e7eb',     // Border color
-    background: '#f9fafb'  // Light background
-};
-
-// EliteMarts Branding
+// Company Information
 const COMPANY_INFO = {
     name: 'ELITEMARTS',
     tagline: 'Premium Lifestyle & Wellness Store',
-    email: 'support@elitemarts.com',
-    phone: '+91-8607832386',
-    instagram: '@elitemartsofficial',
-    website: 'www.elitemarts.com',
-    address: 'India'
+    instagram: 'elitemarts_'
 };
 
-// Main invoice generator function
+// Simple, clean invoice generator
 export async function generateClientInvoice(orderData) {
     try {
         const { jsPDF } = await import('jspdf');
         const doc = new jsPDF();
 
-        // Generate invoice with all sections
-        addHeader(doc);
-        addInvoiceDetails(doc, orderData);
-        addCustomerDetails(doc, orderData);
-        addProductTable(doc, orderData);
-        addPaymentSummary(doc, orderData);
-        addDeliveryDetails(doc, orderData);
-        addFooter(doc);
+        // Colors
+        const BLUE = '#1e40af';
+        const GREEN = '#10b981';
+        const GRAY = '#6b7280';
+        const DARK = '#1f2937';
+        const LIGHT_GRAY = '#f3f4f6';
 
-        // Save the PDF
-        doc.save(`EliteMarts_Invoice_${orderData.orderId}.pdf`);
+        // Get data safely
+        const orderId = orderData.orderId || 'N/A';
+        const name = orderData.customerName || orderData.name || 'Customer';
+        const phone = orderData.phone || 'N/A';
+        const email = orderData.email || 'N/A';
+
+        // Address formatting
+        let address = 'N/A';
+        if (orderData.address) {
+            if (typeof orderData.address === 'object') {
+                const addr = orderData.address;
+                address = `${addr.street || ''}, ${addr.city || ''}, ${addr.state || ''} - ${addr.pincode || ''}`.replace(/, ,/g, ',').replace(/, -/g, ' -');
+            } else {
+                address = orderData.address;
+            }
+        }
+
+        // Pricing
+        const pricing = orderData.pricing || {};
+        const finalPrice = pricing.finalPrice || 1199;
+        const prepaidAmount = 600;
+        const balanceDue = finalPrice - prepaidAmount;
+        const discount = pricing.couponApplied ? 1800 : 0;
+
+        const pageWidth = doc.internal.pageSize.width;
+
+        // --- HEADER ---
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.setTextColor(DARK);
+        doc.text('ELITEMARTS', 15, 20);
+
+        doc.setFontSize(10);
+        doc.setTextColor(GRAY);
+        doc.text('Premium Lifestyle & Wellness Store', 15, 26);
+        doc.text(`Instagram: @${COMPANY_INFO.instagram}`, 15, 32);
+
+        // Line
+        doc.setDrawColor(LIGHT_GRAY);
+        doc.line(15, 38, 195, 38);
+
+        // --- INVOICE DETAILS (Right side) ---
+        doc.setFontSize(14);
+        doc.setTextColor(BLUE);
+        doc.text('INVOICE', 140, 55);
+
+        const invoiceData = [
+            ['Invoice No:', orderId],
+            ['Date:', new Date().toLocaleDateString('en-IN')],
+            ['Order ID:', orderId]
+        ];
+
+        autoTable(doc, {
+            startY: 60,
+            body: invoiceData,
+            theme: 'plain',
+            styles: { fontSize: 9, textColor: DARK },
+            columnStyles: { 0: { fontStyle: 'bold', cellWidth: 25 }, 1: { cellWidth: 50 } },
+            margin: { left: 120 }
+        });
+
+        // --- CUSTOMER DETAILS ---
+        doc.setFontSize(11);
+        doc.setTextColor(BLUE);
+        doc.text('CUSTOMER DETAILS', 15, 85);
+
+        const customerData = [
+            [`Name: ${name}`],
+            [`Phone: ${phone}`],
+            [`Email: ${email}`],
+            ['Address:'],
+            [address]
+        ];
+
+        autoTable(doc, {
+            startY: 90,
+            body: customerData,
+            theme: 'grid',
+            styles: { fontSize: 9, textColor: DARK },
+            margin: { left: 15 },
+            columnStyles: { 0: { cellWidth: 90 } },
+            tableWidth: 90
+        });
+
+        // --- PRODUCT TABLE ---
+        autoTable(doc, {
+            startY: 125,
+            head: [['#', 'Product Description', 'Qty', 'Price', 'Total']],
+            body: [[
+                '1',
+                'Robotic Neck & Shoulder Massager with Heat Therapy',
+                '1',
+                `Rs ${finalPrice.toFixed(2)}`,
+                `Rs ${finalPrice.toFixed(2)}`
+            ]],
+            theme: 'grid',
+            headStyles: { fillColor: BLUE, textColor: '#fff', fontSize: 9 },
+            styles: { fontSize: 9, textColor: DARK },
+            margin: { left: 15, right: 15 },
+            columnStyles: {
+                0: { cellWidth: 10 },
+                1: { cellWidth: 'auto' },
+                2: { cellWidth: 15, halign: 'center' },
+                3: { cellWidth: 30, halign: 'right' },
+                4: { cellWidth: 30, halign: 'right' }
+            }
+        });
+
+        // --- PAYMENT SUMMARY (Right side) ---
+        let yPos = doc.lastAutoTable.finalY + 10;
+
+        doc.setFontSize(10);
+        doc.setTextColor(DARK);
+
+        const summaryItems = [
+            ['Subtotal:', `Rs ${(finalPrice + discount).toFixed(2)}`],
+            ['Discount:', `-Rs ${discount.toFixed(2)}`],
+            ['Shipping:', 'FREE'],
+            ['Tax:', 'Included'],
+            ['TOTAL:', `Rs ${finalPrice.toFixed(2)}`, 'bold']
+        ];
+
+        summaryItems.forEach(([label, value, style]) => {
+            if (style === 'bold') {
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(11);
+                doc.setTextColor(BLUE);
+                yPos += 4;
+            } else {
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(9);
+                doc.setTextColor(DARK);
+            }
+            doc.text(label, pageWidth - 65, yPos);
+            doc.text(value, pageWidth - 25, yPos, { align: 'right' });
+            yPos += 6;
+        });
+
+        // Payment Status Badges
+        yPos += 8;
+        doc.setFillColor(GREEN);
+        doc.roundedRect(15, yPos - 4, 60, 8, 2, 2, 'F');
+        doc.setTextColor('#fff');
+        doc.setFontSize(8);
+        doc.text('Prepaid: Rs 600 PAID', 18, yPos);
+
+        yPos += 12;
+        const balanceColor = orderData.deliveryStatus === 'delivered' ? GREEN : '#f59e0b';
+        doc.setFillColor(balanceColor);
+        doc.roundedRect(15, yPos - 4, 70, 8, 2, 2, 'F');
+        doc.text(`COD Balance: Rs ${balanceDue.toFixed(2)}`, 18, yPos);
+
+        // --- DELIVERY INFO ---
+        yPos += 20;
+        doc.setFontSize(11);
+        doc.setTextColor(BLUE);
+        doc.text('DELIVERY INFORMATION', 15, yPos);
+
+        const deliveryData = [
+            ['Delivery Address:', address],
+            ['Delivery Partner:', 'EliteMarts Logistics'],
+            ['Estimated Delivery:', '4-6 business days'],
+            ['Tracking ID:', `EM-TRK-${orderId.split('-')[1] || 'XXXX'}`]
+        ];
+
+        autoTable(doc, {
+            startY: yPos + 5,
+            body: deliveryData,
+            theme: 'plain',
+            styles: { fontSize: 9, textColor: DARK },
+            columnStyles: { 0: { fontStyle: 'bold', cellWidth: 35 } },
+            margin: { left: 15 }
+        });
+
+        // --- FOOTER ---
+        const footerY = doc.internal.pageSize.height - 25;
+        doc.setDrawColor(LIGHT_GRAY);
+        doc.line(15, footerY - 10, 195, footerY - 10);
+
+        doc.setFontSize(10);
+        doc.setTextColor(BLUE);
+        doc.text('Thank you for shopping with EliteMarts!', 105, footerY, { align: 'center' });
+
+        doc.setFontSize(8);
+        doc.setTextColor(GRAY);
+        doc.text('Your health and wellness is our priority', 105, footerY + 6, { align: 'center' });
+        doc.text(`Follow us: @${COMPANY_INFO.instagram}`, 105, footerY + 12, { align: 'center' });
+
+        // Save
+        doc.save(`EliteMarts_Invoice_${orderId}.pdf`);
         return true;
     } catch (error) {
-        console.error('PDF Generation Error:', error);
-        throw new Error(`Failed to generate invoice: ${error.message}`);
+        console.error('PDF Error:', error);
+        throw new Error(`Failed: ${error.message}`);
     }
-}
-
-// Header with company branding
-function addHeader(doc) {
-    const pageWidth = doc.internal.pageSize.width;
-
-    // Company Name
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(24);
-    doc.setTextColor(COLORS.primary);
-    doc.text(COMPANY_INFO.name, 15, 25);
-
-    // Tagline
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(COLORS.light);
-    doc.text(COMPANY_INFO.tagline, 15, 32);
-
-    // Contact line
-    doc.setFontSize(8);
-    const contactText = `📧 ${COMPANY_INFO.email} | 📞 ${COMPANY_INFO.phone} | 📷 DM: ${COMPANY_INFO.instagram}`;
-    doc.text(contactText, 15, 38);
-
-    // Horizontal line
-    doc.setDrawColor(COLORS.border);
-    doc.setLineWidth(0.5);
-    doc.line(15, 45, pageWidth - 15, 45);
-}
-
-// Invoice details section
-function addInvoiceDetails(doc, data) {
-    const startY = 55;
-
-    // Invoice title on right
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
-    doc.setTextColor(COLORS.primary);
-    doc.text('OFFICIAL INVOICE', 140, startY);
-
-    // Invoice metadata box
-    const details = [
-        ['Invoice No:', data.orderId || 'N/A', 'Date:', new Date().toLocaleDateString('en-IN')],
-        ['Order ID:', data.orderId || 'N/A', 'Time:', new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })]
-    ];
-
-    autoTable(doc, {
-        startY: startY + 5,
-        head: [],
-        body: details,
-        theme: 'plain',
-        styles: {
-            font: 'helvetica',
-            fontSize: 9,
-            textColor: COLORS.dark
-        },
-        columnStyles: {
-            0: { fontStyle: 'bold', cellWidth: 25 },
-            1: { cellWidth: 60 },
-            2: { fontStyle: 'bold', cellWidth: 20 },
-            3: { cellWidth: 30 }
-        },
-        margin: { left: 120 },
-        tableLineColor: COLORS.border,
-        tableLineWidth: 0.1
-    });
-}
-
-// Customer details section
-function addCustomerDetails(doc, data) {
-    const startY = 85;
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(COLORS.primary);
-    doc.text('BILL TO / SHIP TO', 15, startY);
-
-    // Format address
-    const address = data.address;
-    let addressText = '';
-    if (typeof address === 'object') {
-        addressText = `${address.street || ''}, ${address.city || ''}, ${address.state || ''} - ${address.pincode || ''}`;
-    } else {
-        addressText = address || 'Not provided';
-    }
-
-    const customerInfo = [
-        [`Name: ${data.name || data.customerName || 'Customer'}`],
-        [`Phone: ${data.phone || 'N/A'}`],
-        [`Email: ${data.email || 'N/A'}`],
-        ['Address:'],
-        [addressText]
-    ];
-
-    autoTable(doc, {
-        startY: startY + 5,
-        head: [],
-        body: customerInfo,
-        theme: 'grid',
-        styles: {
-            font: 'helvetica',
-            fontSize: 9,
-            textColor: COLORS.dark,
-            lineColor: COLORS.border,
-            lineWidth: 0.1
-        },
-        columnStyles: {
-            0: { cellWidth: 90 }
-        },
-        margin: { left: 15 },
-        tableWidth: 90
-    });
-}
-
-// Product table
-function addProductTable(doc, data) {
-    const startY = 145;
-
-    // Table header
-    const headers = [['#', 'Product Description', 'Quantity', 'Unit Price', 'Total']];
-
-    // Table body
-    const products = [
-        [
-            1,
-            'Robotic Neck & Shoulder Massager with Heat Therapy',
-            '1',
-            '₹1,199.00',
-            '₹1,199.00'
-        ]
-    ];
-
-    autoTable(doc, {
-        startY: startY,
-        head: headers,
-        body: products,
-        theme: 'grid',
-        headStyles: {
-            fillColor: COLORS.primary,
-            textColor: '#ffffff',
-            fontStyle: 'bold',
-            fontSize: 9
-        },
-        styles: {
-            font: 'helvetica',
-            fontSize: 9,
-            textColor: COLORS.dark
-        },
-        alternateRowStyles: {
-            fillColor: COLORS.background
-        },
-        margin: { left: 15, right: 15 },
-        columnStyles: {
-            0: { cellWidth: 10 },
-            1: { cellWidth: 'auto' },
-            2: { cellWidth: 20, halign: 'center' },
-            3: { cellWidth: 30, halign: 'right' },
-            4: { cellWidth: 30, halign: 'right' }
-        },
-        tableLineColor: COLORS.border,
-        tableLineWidth: 0.1
-    });
-}
-
-// Payment summary
-function addPaymentSummary(doc, data) {
-    const startY = doc.lastAutoTable.finalY + 10;
-    const pageWidth = doc.internal.pageSize.width;
-
-    const pricing = data.pricing || {};
-    const finalPrice = pricing.finalPrice || 1199;
-    const discount = pricing.couponApplied ? 1800 : 0;
-    const subtotal = finalPrice + discount;
-
-    // Summary on right side
-    let currentY = startY;
-
-    // Subtotal
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(COLORS.dark);
-    doc.text('Subtotal:', pageWidth - 65, currentY);
-    doc.text(`₹${subtotal.toFixed(2)}`, pageWidth - 25, currentY, { align: 'right' });
-    currentY += 6;
-
-    // Discount
-    if (pricing.couponApplied) {
-        doc.text('Coupon Discount (ELITEMARTS27):', pageWidth - 65, currentY);
-        doc.text(`-₹${discount.toFixed(2)}`, pageWidth - 25, currentY, { align: 'right' });
-        currentY += 6;
-    }
-
-    // Shipping
-    doc.text('Shipping:', pageWidth - 65, currentY);
-    doc.text('₹0.00', pageWidth - 25, currentY, { align: 'right' });
-    currentY += 6;
-
-    // Tax
-    doc.text('Tax (GST):', pageWidth - 65, currentY);
-    doc.text('₹0.00', pageWidth - 25, currentY, { align: 'right' });
-    currentY += 6;
-
-    // Final Total
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.setTextColor(COLORS.primary);
-    doc.text('FINAL TOTAL:', pageWidth - 65, currentY);
-    doc.text(`₹${finalPrice.toFixed(2)}`, pageWidth - 25, currentY, { align: 'right' });
-
-    // Line for total
-    doc.setDrawColor(COLORS.primary);
-    doc.setLineWidth(0.8);
-    doc.line(pageWidth - 65, currentY + 2, pageWidth - 15, currentY + 2);
-
-    currentY += 10;
-
-    // Payment status badges
-    const advancePaid = data.paymentStatus === 'paid' || data.paymentStatus === 'verified';
-    const balanceAmount = finalPrice - 600;
-
-    // Advance payment badge
-    drawBadge(doc, 15, currentY, 'Advance Payment: COMPLETED', '#10b981');
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(COLORS.dark);
-    doc.text('₹600.00', 90, currentY);
-
-    currentY += 8;
-
-    // Balance payment badge
-    const balanceStatus = data.deliveryStatus === 'delivered' ? 'COMPLETED' : 'PENDING (COD)';
-    const balanceColor = data.deliveryStatus === 'delivered' ? '#10b981' : '#f59e0b';
-    drawBadge(doc, 15, currentY, `Balance Payment: ${balanceStatus}`, balanceColor);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(COLORS.dark);
-    doc.text(`₹${balanceAmount.toFixed(2)}`, 110, currentY);
-}
-
-// Delivery details
-function addDeliveryDetails(doc, data) {
-    const startY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 50 : 200;
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(COLORS.primary);
-    doc.text('DELIVERY INFORMATION', 15, startY);
-
-    // Get delivery info
-    const deliveryDays = data.estimatedDelivery?.days || '4-6 business days';
-    let estimatedDate = deliveryDays;
-    if (data.estimatedDelivery?.start && data.estimatedDelivery?.end) {
-        const startDate = new Date(data.estimatedDelivery.start).toLocaleDateString('en-IN');
-        const endDate = new Date(data.estimatedDelivery.end).toLocaleDateString('en-IN');
-        estimatedDate = `${startDate} - ${endDate}`;
-    }
-
-    const deliveryInfo = [
-        ['Delivery Address:', 'As mentioned above'],
-        ['Delivery Partner:', 'EliteMarts Logistics'],
-        ['Estimated Delivery:', estimatedDate],
-        ['Tracking ID:', data.orderId ? `EM-TRK-${data.orderId.split('-')[1]}` : 'Will be provided after dispatch']
-    ];
-
-    autoTable(doc, {
-        startY: startY + 5,
-        head: [],
-        body: deliveryInfo,
-        theme: 'plain',
-        styles: {
-            font: 'helvetica',
-            fontSize: 9,
-            textColor: COLORS.dark
-        },
-        columnStyles: {
-            0: { fontStyle: 'bold', cellWidth: 40 },
-            1: { cellWidth: 'auto' }
-        },
-        margin: { left: 15 },
-        tableLineColor: COLORS.border,
-        tableLineWidth: 0.1
-    });
-}
-
-// Footer with contact info
-function addFooter(doc) {
-    const pageHeight = doc.internal.pageSize.height;
-    const footerY = pageHeight - 30;
-
-    // Separator line
-    doc.setDrawColor(COLORS.border);
-    doc.setLineWidth(0.5);
-    doc.line(15, footerY - 10, 195, footerY - 10);
-
-    // Thank you note
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(COLORS.primary);
-    doc.text('Thank you for shopping with EliteMarts!', 105, footerY, { align: 'center' });
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(COLORS.dark);
-    doc.text('Your health and wellness is our priority', 105, footerY + 6, { align: 'center' });
-
-    // Contact info
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(COLORS.light);
-
-    const contactLine1 = `Email: ${COMPANY_INFO.email} | Phone: ${COMPANY_INFO.phone}`;
-    const contactLine2 = `Instagram DM: ${COMPANY_INFO.instagram} | Website: ${COMPANY_INFO.website}`;
-
-    doc.text(contactLine1, 105, footerY + 14, { align: 'center' });
-    doc.text(contactLine2, 105, footerY + 19, { align: 'center' });
-}
-
-// Helper function to draw status badges
-function drawBadge(doc, x, y, text, color) {
-    const textWidth = doc.getTextWidth(text);
-    const padding = 3;
-
-    // Badge background
-    doc.setFillColor(color);
-    doc.roundedRect(x, y - 4, textWidth + padding * 2, 8, 2, 2, 'F');
-
-    // Badge text
-    doc.setTextColor('#ffffff');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7);
-    doc.text(text, x + padding, y);
 }
 ================================================================================
 
@@ -5787,11 +5931,31 @@ FILE: src\lib\notifications.js
 --------------------------------------------------------------------------------
 import { bot, env } from './telegram';
 
-export async function sendTelegramNotification({ sessionId, customer, amount, qrCode }) {
+// Async notification with timeout - non-blocking
+export async function sendTelegramNotification({ sessionId, customer, amount, qrCode, orderId }) {
+    // Fire and forget - don't block the main flow
+    setImmediate(async () => {
+        try {
+            await sendNotificationWithTimeout({ sessionId, customer, amount, qrCode, orderId });
+        } catch (error) {
+            console.error('Background Telegram notification failed:', error);
+        }
+    });
+
+    return true; // Return immediately
+}
+
+// Internal function with timeout
+async function sendNotificationWithTimeout({ sessionId, customer, amount, qrCode, orderId }) {
     if (!bot || !env) {
         console.log('⚠️ Telegram bot not configured, skipping notification');
         return false;
     }
+
+    // Create timeout promise (2 seconds max)
+    const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Telegram notification timeout')), 2000)
+    );
 
     // Safely access address fields with complete details
     const street = customer?.address?.street || customer?.address || 'N/A';
@@ -5802,6 +5966,8 @@ export async function sendTelegramNotification({ sessionId, customer, amount, qr
 
     const message = `
 🚨 *NEW PAYMENT PENDING*
+
+📦 *Order ID:* \`${orderId || sessionId}\`
 
 👤 *Customer Details:*
 • Name: ${customer.name}
@@ -5838,21 +6004,28 @@ _Click the buttons below to take action:_
             ]
         };
 
-        await bot.sendMessage(env.TELEGRAM_ADMIN_CHAT_ID, message, {
-            parse_mode: 'Markdown',
-            reply_markup: keyboard
-        });
+        // Race between sending message and timeout
+        await Promise.race([
+            bot.sendMessage(env.TELEGRAM_ADMIN_CHAT_ID, message, {
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            }),
+            timeoutPromise
+        ]);
 
         console.log(`📱 Telegram notification sent for session: ${sessionId}`);
         return true;
     } catch (error) {
-        console.error('Telegram notification error:', error);
+        if (error.message === 'Telegram notification timeout') {
+            console.warn('⚠️ Telegram notification timed out (non-blocking)');
+        } else {
+            console.error('Telegram notification error:', error);
+        }
         return false;
     }
 }
 
 export default bot;
-
 
 
 ================================================================================
@@ -6315,7 +6488,7 @@ export const validateEnv = () => {
 ================================================================================
 END OF PROJECT CODE
 ================================================================================
-Total Files: 51
-Total Size: 0.22 MB
-Generated: 1/10/2026, 10:58:34 PM
+Total Files: 50
+Total Size: 0.24 MB
+Generated: 1/11/2026, 9:42:11 PM
 ================================================================================

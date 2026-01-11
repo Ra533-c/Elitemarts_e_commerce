@@ -5,6 +5,8 @@ import { sendTelegramNotification } from '@/lib/notifications';
 
 
 export async function POST(request) {
+    const startTime = Date.now();
+
     try {
         const { customer, pricing } = await request.json();
 
@@ -13,7 +15,7 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        // Generate unique Session ID
+        // Generate session ID
         const sessionId = `SESSION-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
 
         // Generate UPI payment URL
@@ -21,21 +23,23 @@ export async function POST(request) {
         const amount = 600;
         const upiUrl = `upi://pay?pa=${upiId}&pn=EliteMarts&am=${amount}&tn=Payment_${sessionId}&cu=INR`;
 
-        // Generate QR Code as base64
-        const qrCodeImage = await QRCode.toDataURL(upiUrl, {
-            width: 300,
-            margin: 2,
-            color: { dark: '#000000', light: '#FFFFFF' }
-        });
+        // Parallel operations: Generate QR, Instamojo URL simultaneously
+        const [qrCodeImage] = await Promise.all([
+            // QR Code generation
+            QRCode.toDataURL(upiUrl, {
+                width: 300,
+                margin: 2,
+                color: { dark: '#000000', light: '#FFFFFF' }
+            })
+        ]);
 
-        // Generate Instamojo payment URL
+        // Construct Instamojo URL (no async needed)
         const instamojoBaseUrl = process.env.INSTAMOJO_LINK || 'https://imjo.in/Hvu4ws';
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
         const returnUrl = `${appUrl}/success`;
-
         const instamojoUrl = `${instamojoBaseUrl}?amount=600&purpose=BOOKING_FEE&order_id=${sessionId}&buyer_name=${encodeURIComponent(customer.name)}&phone=${customer.phone}&redirect_url=${encodeURIComponent(returnUrl)}`;
 
-        // Create payment session document
+        // Prepare session document
         const sessionDoc = {
             sessionId,
             customerData: {
@@ -60,49 +64,48 @@ export async function POST(request) {
                 upiId,
                 amount,
                 data: upiUrl,
-                expiresAt: new Date(Date.now() + 15 * 60 * 1000) // 15 minutes expiry
+                expiresAt: new Date(Date.now() + 15 * 60 * 1000)
             },
-            instamojoUrl, // Add Instamojo URL
-            paymentStatus: 'pending', // pending, verified, failed, expired
-            orderId: null, // Will be set after order creation
+            instamojoUrl,
+            paymentStatus: 'pending',
+            orderId: null,
             createdAt: new Date(),
             expiresAt: new Date(Date.now() + 15 * 60 * 1000)
         };
 
-        // Save to MongoDB with indexes for performance
+        // Save to DB and send Telegram notification in parallel
         const client = await clientPromise;
         const db = client.db('elitemarts');
 
-        // Create indexes (safe to call multiple times)
-        await db.collection('payment_sessions').createIndex({ sessionId: 1 }, { unique: true });
-        await db.collection('payment_sessions').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-        await db.collection('payment_sessions').createIndex({ paymentStatus: 1 });
+        // Parallel DB save and Telegram notification
+        await Promise.all([
+            db.collection('payment_sessions').insertOne(sessionDoc),
+            sendTelegramNotification({
+                sessionId,
+                customer,
+                amount,
+                qrCode: sessionDoc.qrCode,
+                orderId: sessionId
+            }).catch(err => console.error('Telegram notification failed:', err))
+        ]);
 
-        await db.collection('payment_sessions').insertOne(sessionDoc);
+        const endTime = Date.now();
+        console.log(`Payment session created in ${endTime - startTime}ms`);
 
-        // 🚨 SEND INSTANT TELEGRAM NOTIFICATION TO ADMIN
-        await sendTelegramNotification({
-            sessionId,
-            customer,
-            amount,
-            qrCode: sessionDoc.qrCode
-        });
-
-        // Return session data
         return NextResponse.json({
             success: true,
             sessionId,
             qrCode: sessionDoc.qrCode,
-            instamojoUrl, // Return Instamojo URL
+            instamojoUrl,
             customerData: sessionDoc.customerData,
             expiresAt: sessionDoc.expiresAt,
             message: 'Payment session created successfully'
         });
 
     } catch (error) {
-        console.error('Payment session creation error:', error);
+        console.error('Session creation error:', error);
         return NextResponse.json(
-            { error: 'Failed to create payment session', details: error.message },
+            { error: 'Failed to create session', details: error.message },
             { status: 500 }
         );
     }
@@ -110,24 +113,37 @@ export async function POST(request) {
 
 // GET endpoint to check session status
 export async function GET(request) {
+    const { searchParams } = new URL(request.url);
+    const sessionId = searchParams.get('sessionId');
+
+    if (!sessionId) {
+        return NextResponse.json({ error: 'Session ID required' }, { status: 400 });
+    }
+
     try {
-        const { searchParams } = new URL(request.url);
-        const sessionId = searchParams.get('sessionId');
-
-        if (!sessionId) {
-            return NextResponse.json({ error: 'Session ID required' }, { status: 400 });
-        }
-
         const client = await clientPromise;
         const db = client.db('elitemarts');
 
-        const session = await db.collection('payment_sessions').findOne({ sessionId });
+        const session = await db.collection('payment_sessions').findOne(
+            { sessionId },
+            {
+                projection: {
+                    paymentStatus: 1,
+                    orderId: 1,
+                    expiresAt: 1,
+                    qrCode: 1,
+                    rejectedAt: 1,
+                    rejectionReason: 1,
+                    customerData: 1
+                }
+            }
+        );
 
         if (!session) {
             return NextResponse.json({ error: 'Session not found' }, { status: 404 });
         }
 
-        // Check if expired
+        // Check expiration
         if (new Date() > new Date(session.expiresAt) && session.paymentStatus === 'pending') {
             await db.collection('payment_sessions').updateOne(
                 { sessionId },
@@ -143,13 +159,15 @@ export async function GET(request) {
                 paymentStatus: session.paymentStatus,
                 orderId: session.orderId,
                 expiresAt: session.expiresAt,
-                qrCode: session.qrCode
+                qrCode: session.qrCode,
+                rejectedAt: session.rejectedAt,
+                rejectionReason: session.rejectionReason,
+                customerData: session.customerData
             }
         });
 
     } catch (error) {
-        console.error('Session status check error:', error);
-        return NextResponse.json({ error: 'Failed to check session status' }, { status: 500 });
+        return NextResponse.json({ error: 'Failed to check status' }, { status: 500 });
     }
 }
 

@@ -1,10 +1,30 @@
 import { bot, env } from './telegram';
 
-export async function sendTelegramNotification({ sessionId, customer, amount, qrCode }) {
+// Async notification with timeout - non-blocking
+export async function sendTelegramNotification({ sessionId, customer, amount, qrCode, orderId }) {
+    // Fire and forget - don't block the main flow
+    setImmediate(async () => {
+        try {
+            await sendNotificationWithTimeout({ sessionId, customer, amount, qrCode, orderId });
+        } catch (error) {
+            console.error('Background Telegram notification failed:', error);
+        }
+    });
+
+    return true; // Return immediately
+}
+
+// Internal function with timeout
+async function sendNotificationWithTimeout({ sessionId, customer, amount, qrCode, orderId }) {
     if (!bot || !env) {
         console.log('⚠️ Telegram bot not configured, skipping notification');
         return false;
     }
+
+    // Create timeout promise (2 seconds max)
+    const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Telegram notification timeout')), 2000)
+    );
 
     // Safely access address fields with complete details
     const street = customer?.address?.street || customer?.address || 'N/A';
@@ -15,6 +35,8 @@ export async function sendTelegramNotification({ sessionId, customer, amount, qr
 
     const message = `
 🚨 *NEW PAYMENT PENDING*
+
+📦 *Order ID:* \`${orderId || sessionId}\`
 
 👤 *Customer Details:*
 • Name: ${customer.name}
@@ -51,19 +73,26 @@ _Click the buttons below to take action:_
             ]
         };
 
-        await bot.sendMessage(env.TELEGRAM_ADMIN_CHAT_ID, message, {
-            parse_mode: 'Markdown',
-            reply_markup: keyboard
-        });
+        // Race between sending message and timeout
+        await Promise.race([
+            bot.sendMessage(env.TELEGRAM_ADMIN_CHAT_ID, message, {
+                parse_mode: 'Markdown',
+                reply_markup: keyboard
+            }),
+            timeoutPromise
+        ]);
 
         console.log(`📱 Telegram notification sent for session: ${sessionId}`);
         return true;
     } catch (error) {
-        console.error('Telegram notification error:', error);
+        if (error.message === 'Telegram notification timeout') {
+            console.warn('⚠️ Telegram notification timed out (non-blocking)');
+        } else {
+            console.error('Telegram notification error:', error);
+        }
         return false;
     }
 }
 
 export default bot;
-
 

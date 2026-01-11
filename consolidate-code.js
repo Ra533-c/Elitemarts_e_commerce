@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 // Configuration
-const MAX_SIZE_MB = 50;
+const MAX_SIZE_MB = 10;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 const OUTPUT_FILE = 'FULL_PROJECT_CODE.txt';
 
@@ -37,12 +37,62 @@ let totalSize = 0;
 let fileCount = 0;
 let output = '';
 
-// Header
+// Header with Project Overview
 output += '='.repeat(80) + '\n';
 output += 'ELITEMARTS E-COMMERCE PROJECT - COMPLETE SOURCE CODE\n';
 output += '='.repeat(80) + '\n';
 output += `Generated: ${new Date().toLocaleString()}\n`;
 output += `Size Limit: ${MAX_SIZE_MB}MB\n`;
+output += '='.repeat(80) + '\n\n';
+
+// Project Overview
+output += 'PROJECT OVERVIEW\n';
+output += '-'.repeat(80) + '\n';
+output += 'EliteMarts is a Next.js-based e-commerce platform with the following features:\n';
+output += '\n';
+output += '✓ Product showcase and ordering system\n';
+output += '✓ Payment integration with Instamojo\n';
+output += '✓ Order tracking and management\n';
+output += '✓ Admin panel for order verification\n';
+output += '✓ Telegram bot integration for notifications\n';
+output += '✓ MongoDB database for data persistence\n';
+output += '✓ PDF invoice generation\n';
+output += '\n';
+output += 'TECH STACK\n';
+output += '-'.repeat(80) + '\n';
+output += 'Frontend: Next.js 15, React, Tailwind CSS\n';
+output += 'Backend: Next.js API Routes\n';
+output += 'Database: MongoDB\n';
+output += 'Payment: Instamojo\n';
+output += 'Notifications: Telegram Bot API\n';
+output += 'PDF: jsPDF\n';
+output += 'Deployment: Vercel\n';
+output += '\n';
+output += 'DIRECTORY STRUCTURE\n';
+output += '-'.repeat(80) + '\n';
+output += 'src/\n';
+output += '  ├── app/                    # Next.js app directory\n';
+output += '  │   ├── api/               # API routes\n';
+output += '  │   │   ├── admin/         # Admin endpoints\n';
+output += '  │   │   ├── order/         # Order management\n';
+output += '  │   │   ├── payment/       # Payment processing\n';
+output += '  │   │   └── telegram/      # Telegram webhook\n';
+output += '  │   ├── admin/             # Admin panel page\n';
+output += '  │   ├── success/           # Payment success page\n';
+output += '  │   ├── track/             # Order tracking page\n';
+output += '  │   └── page.js            # Home page\n';
+output += '  ├── components/            # React components\n';
+output += '  └── lib/                   # Utility libraries\n';
+output += '      ├── database.js        # MongoDB connection\n';
+output += '      ├── telegram.js        # Telegram bot\n';
+output += '      ├── notifications.js   # Notification system\n';
+output += '      └── clientInvoice.js   # PDF generation\n';
+output += '\n';
+output += 'public/                      # Static assets\n';
+output += 'scripts/                     # Utility scripts\n';
+output += '\n';
+output += '='.repeat(80) + '\n';
+output += 'SOURCE CODE FILES\n';
 output += '='.repeat(80) + '\n\n';
 
 function shouldIncludeFile(filePath, fileName) {

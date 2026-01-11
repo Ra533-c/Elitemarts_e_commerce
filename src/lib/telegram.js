@@ -109,25 +109,28 @@ async function handleTelegramCommand(sessionId, action, chatId, messageId = null
             }
 
         } else if (action === 'reject') {
-            // Update session to failed
+            // Update session to REJECTED (admin rejected) instead of 'failed'
             await db.collection('payment_sessions').updateOne(
                 { sessionId },
                 {
                     $set: {
-                        paymentStatus: 'failed',
-                        failedAt: new Date(),
-                        failedBy: 'telegram_admin'
+                        paymentStatus: 'rejected', // NEW: distinct from 'failed'
+                        rejectedAt: new Date(),
+                        rejectedBy: 'telegram_admin',
+                        rejectionReason: 'Payment not received or incorrect amount' // NEW: track reason
                     }
                 }
             );
 
-            console.log(`❌ Session ${sessionId} marked as failed`);
+            console.log(`❌ Session ${sessionId} marked as rejected by admin`);
 
             const rejectionMessage =
                 `❌ *Payment Rejected*\n\n` +
                 `Session: \`${sessionId}\`\n` +
-                `Customer: *${session.customerData.name}*\n\n` +
-                `User will be notified to retry payment.`;
+                `Customer: *${session.customerData.name}*\n` +
+                `Amount: *₹600*\n\n` +
+                `Reason: Payment not received or incorrect amount.\n\n` +
+                `User will be redirected to retry payment.`;
 
             // If messageId is provided (from inline button), edit the original message
             if (messageId) {
