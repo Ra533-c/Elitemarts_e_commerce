@@ -94,5 +94,21 @@ _Click the buttons below to take action:_
     }
 }
 
+/**
+ * Stub function for SMS notifications (future implementation)
+ * Currently logs to console - replace with actual SMS service
+ */
+export async function sendSMS(phone, message) {
+    // Log the attempt (non-blocking)
+    console.log(`📱 SMS would be sent to ${phone}: ${message}`);
+    console.log('⚠️ SMS service not implemented yet - this is a placeholder');
+
+    // Return success to avoid breaking the flow
+    return {
+        success: true,
+        message: 'SMS service placeholder - no actual message sent'
+    };
+}
+
 export default bot;
 
