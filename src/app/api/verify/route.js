@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/database';
 
+// Payment verification endpoint - Updated 2026-01-13
 
 export async function POST(request) {
     try {
