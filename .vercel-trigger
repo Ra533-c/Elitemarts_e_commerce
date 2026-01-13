@@ -1,0 +1,10 @@
+# Vercel Deployment Trigger
+
+This file is used to trigger a fresh Vercel deployment.
+Last updated: 2026-01-13 17:30 IST
+
+## Latest Fixes
+- Next.js 14.2.18 (valid version)
+- All dependencies updated
+- sendSMS stub function added to notifications.js
+- No sendSMS import in verify/route.js
