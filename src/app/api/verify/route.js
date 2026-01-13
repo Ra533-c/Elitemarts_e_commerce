@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/database';
 
-// Payment verification endpoint - Updated 2026-01-13
-
 export async function POST(request) {
     try {
         const { orderId, password } = await request.json();
@@ -30,14 +28,12 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Order not found' }, { status: 404 });
         }
 
-
         // Fetch order to get phone number (for future SMS integration)
         const order = await db.collection('orders').findOne({ orderId });
 
         if (order) {
             console.log(`Payment verified for order ${orderId}, customer: ${order.phone}`);
         }
-
 
         return NextResponse.json({
             success: true,
