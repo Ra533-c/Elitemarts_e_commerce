@@ -208,24 +208,47 @@ function registerCommandHandlers() {
         const messageId = callbackQuery.message.message_id;
         const data = callbackQuery.data;
 
-        console.log(`📲 Received callback query: ${data}`);
+        console.log(`📲 RECEIVED CALLBACK QUERY:`, {
+            chatId,
+            messageId,
+            data,
+            from: callbackQuery.from.username,
+            timestamp: new Date().toISOString()
+        });
 
-        // Parse callback data: verify_SESSIONID or reject_SESSIONID
-        const [action, sessionId] = data.split('_', 2);
-
-        if (action === 'verify' || action === 'reject') {
-            // Answer the callback query to remove loading state
+        try {
+            // Answer the callback query immediately to remove loading state
             await bot.answerCallbackQuery(callbackQuery.id, {
-                text: `Processing ${action}...`
+                text: 'Processing...'
             });
 
-            // Handle the command
-            await handleTelegramCommand(sessionId, action, chatId, messageId);
-        } else {
-            await bot.answerCallbackQuery(callbackQuery.id, {
-                text: 'Unknown action',
-                show_alert: true
-            });
+            // Parse callback data: verify_SESSIONID or reject_SESSIONID
+            const [action, sessionId] = data.split('_', 2);
+
+            if (action === 'verify' || action === 'reject') {
+                console.log(`🎯 Processing ${action} for session: ${sessionId}`);
+
+                // Handle the command
+                await handleTelegramCommand(sessionId, action, chatId, messageId);
+
+                console.log(`✅ ${action} completed successfully for session: ${sessionId}`);
+            } else {
+                console.warn(`⚠️ Unknown action: ${action}`);
+                await bot.answerCallbackQuery(callbackQuery.id, {
+                    text: 'Unknown action',
+                    show_alert: true
+                });
+            }
+        } catch (error) {
+            console.error('❌ Callback query error:', error);
+            try {
+                await bot.answerCallbackQuery(callbackQuery.id, {
+                    text: 'Error processing action',
+                    show_alert: true
+                });
+            } catch (e) {
+                console.error('Failed to send error alert:', e);
+            }
         }
     });
 
@@ -268,6 +291,9 @@ if (env) {
             console.log('📱 Admin Chat ID:', env.TELEGRAM_ADMIN_CHAT_ID);
             console.log('🔗 Webhook URL:', WEBHOOK_URL);
             console.log('💡 Remember to set webhook after deployment');
+
+            // 🚨 FIX: Register listeners immediately for webhook mode
+            registerCommandHandlers();
         }
 
         // Error handlers

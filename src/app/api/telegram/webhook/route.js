@@ -70,6 +70,7 @@ const registerBotListeners = () => {
 // POST request - handle webhook updates from Telegram
 export async function POST(request) {
     if (!bot) {
+        console.error('❌ Bot not initialized');
         return NextResponse.json({ error: 'Bot not initialized' }, { status: 503 });
     }
 
@@ -83,11 +84,30 @@ export async function POST(request) {
 
         const body = await request.json();
 
-        // Register listeners before processing
+        // Log incoming update for debugging
+        console.log('📨 Webhook received:', {
+            updateId: body.update_id,
+            hasCallbackQuery: !!body.callback_query,
+            hasMessage: !!body.message,
+            timestamp: new Date().toISOString()
+        });
+
+        // Register listeners before processing (safety check)
         registerBotListeners();
 
-        // Process update (non-blocking)
-        bot.processUpdate(body);
+        // Process update with error handling
+        try {
+            await new Promise((resolve, reject) => {
+                bot.processUpdate(body);
+                // Give bot time to process async operations
+                setTimeout(resolve, 100);
+            });
+
+            console.log('✅ Update processed successfully');
+        } catch (processError) {
+            console.error('❌ Error processing update:', processError);
+            // Still return 200 to Telegram to acknowledge receipt
+        }
 
         return NextResponse.json({ ok: true });
     } catch (error) {
