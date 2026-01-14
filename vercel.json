@@ -2,7 +2,7 @@
     "functions": {
         "src/app/api/telegram/webhook/route.js": {
             "maxDuration": 30,
-            "memory": 256
+            "memory": 512
         }
     }
 }

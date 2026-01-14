@@ -1,121 +1,141 @@
 import { NextResponse } from 'next/server';
 import { bot, WEBHOOK_URL, env, setupCommands, handleTelegramCommand } from '@/lib/telegram';
-import clientPromise from '@/lib/database';
 
-// Note: Using Node.js runtime instead of Edge for MongoDB compatibility
 export const dynamic = 'force-dynamic';
-
-
-// Register bot event listeners (only once)
-let listenersRegistered = false;
-
-const registerBotListeners = () => {
-    if (!bot || listenersRegistered) return;
-
-    // Welcome command
-    bot.onText(/\/start/, async (msg) => {
-        try {
-            await bot.sendMessage(
-                msg.chat.id,
-                `🎉 *Welcome to EliteMarts Bot!*\n\n` +
-                `Bot is running successfully on Vercel with webhooks!\n\n` +
-                `*Your Chat ID:* \`${msg.chat.id}\`\n\n` +
-                `Use this Chat ID in your .env.local as TELEGRAM_ADMIN_CHAT_ID`,
-                { parse_mode: 'Markdown' }
-            );
-        } catch (error) {
-            console.error('Start command error:', error);
-        }
-    });
-
-    // Help command
-    bot.onText(/\/help/, async (msg) => {
-        try {
-            await bot.sendMessage(
-                msg.chat.id,
-                `📚 *Available Commands:*\n\n` +
-                `/start - Welcome message\n` +
-                `/help - Show this help\n` +
-                `/verify SESSIONID - Verify a payment\n` +
-                `/reject SESSIONID - Reject a payment`,
-                { parse_mode: 'Markdown' }
-            );
-        } catch (error) {
-            console.error('Help command error:', error);
-        }
-    });
-
-    // Verify command - supports both formats: /verify_SESSIONID and /verify SESSIONID
-    bot.onText(/\/verify[_ ](.+)/, async (msg, match) => {
-        const sessionId = match[1].trim();
-        await handleTelegramCommand(sessionId, 'verify', msg.chat.id);
-    });
-
-    // Reject command - supports both formats: /reject_SESSIONID and /reject SESSIONID
-    bot.onText(/\/reject[_ ](.+)/, async (msg, match) => {
-        const sessionId = match[1].trim();
-        await handleTelegramCommand(sessionId, 'reject', msg.chat.id);
-    });
-
-    // Error handler
-    bot.on('error', (error) => {
-        console.error('Bot error:', error);
-    });
-
-    listenersRegistered = true;
-    console.log('✅ Bot event listeners registered');
-};
-
+export const runtime = 'nodejs';
 
 // POST request - handle webhook updates from Telegram
 export async function POST(request) {
-    if (!bot) {
-        console.error('❌ Bot not initialized');
-        return NextResponse.json({ error: 'Bot not initialized' }, { status: 503 });
+    if (!bot || !env) {
+        console.error('❌ Bot or environment not initialized');
+        return NextResponse.json({ error: 'Bot not configured' }, { status: 503 });
     }
 
+    let body;
     try {
-        // Security: Verify request is from Telegram (optional but recommended)
-        const secretToken = request.headers.get('x-telegram-bot-api-secret-token');
-        if (process.env.NODE_ENV === 'production' && env?.WEBHOOK_SECRET && secretToken !== env.WEBHOOK_SECRET) {
-            console.warn('⚠️ Unauthorized webhook request');
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
+        body = await request.json();
+    } catch (error) {
+        console.error('❌ Invalid JSON in webhook body:', error);
+        return NextResponse.json({ ok: false, error: 'Invalid JSON' }, { status: 400 });
+    }
 
-        const body = await request.json();
+    // Log incoming update
+    console.log('📨 Webhook received:', {
+        updateId: body.update_id,
+        type: body.callback_query ? 'callback_query' : (body.message ? 'message' : 'unknown'),
+        timestamp: new Date().toISOString()
+    });
 
-        // Log incoming update for debugging
-        console.log('📨 Webhook received:', {
-            updateId: body.update_id,
-            hasCallbackQuery: !!body.callback_query,
-            hasMessage: !!body.message,
-            timestamp: new Date().toISOString()
-        });
+    try {
+        // =========================================
+        // CRITICAL FIX: Handle callback queries DIRECTLY
+        // =========================================
+        if (body.callback_query) {
+            const callbackQuery = body.callback_query;
+            const chatId = callbackQuery.message.chat.id;
+            const messageId = callbackQuery.message.message_id;
+            const data = callbackQuery.data;
 
-        // Register listeners before processing (safety check)
-        registerBotListeners();
-
-        // Process update with error handling
-        try {
-            await new Promise((resolve, reject) => {
-                bot.processUpdate(body);
-                // Give bot time to process async operations
-                setTimeout(resolve, 100);
+            console.log('🎯 CALLBACK QUERY DETECTED:', {
+                chatId,
+                messageId,
+                data,
+                from: callbackQuery.from.username,
+                timestamp: new Date().toISOString()
             });
 
-            console.log('✅ Update processed successfully');
-        } catch (processError) {
-            console.error('❌ Error processing update:', processError);
-            // Still return 200 to Telegram to acknowledge receipt
+            // 1. Answer callback IMMEDIATELY (stops Telegram from retrying)
+            await bot.answerCallbackQuery(callbackQuery.id, {
+                text: '⚡ Processing...'
+            });
+
+            // 2. Parse action and sessionId
+            const [action, sessionId] = data.split('_', 2);
+
+            if (!action || !sessionId) {
+                console.error('❌ Invalid callback data:', data);
+                await bot.sendMessage(chatId, '❌ Invalid action format.');
+                return NextResponse.json({ ok: true });
+            }
+
+            // 3. Verify admin authorization
+            if (chatId.toString() !== env.TELEGRAM_ADMIN_CHAT_ID.toString()) {
+                console.warn('⛔ Unauthorized callback from:', chatId);
+                await bot.sendMessage(chatId, '❌ Unauthorized. Only admin can perform this action.');
+                return NextResponse.json({ ok: true });
+            }
+
+            // 4. Process the action SYNCHRONOUSLY
+            console.log(`🔄 Processing ${action} for session: ${sessionId}`);
+
+            try {
+                // Use the same handler function but call it directly
+                await handleTelegramCommand(sessionId, action, chatId, messageId);
+                console.log(`✅ ${action} completed successfully for session: ${sessionId}`);
+            } catch (error) {
+                console.error(`❌ Error in handleTelegramCommand:`, error);
+                await bot.sendMessage(chatId, `❌ Error: ${error.message}`);
+            }
+
+            // 5. Return immediately after processing
+            return NextResponse.json({ ok: true });
         }
 
+        // =========================================
+        // Handle regular messages (for /start, /help, /verify, /reject)
+        // =========================================
+        if (body.message) {
+            const msg = body.message;
+            const chatId = msg.chat.id;
+            const text = msg.text || '';
+
+            console.log('💬 MESSAGE RECEIVED:', {
+                chatId,
+                text,
+                from: msg.from?.username
+            });
+
+            // Handle commands
+            if (text.startsWith('/start')) {
+                await bot.sendMessage(
+                    chatId,
+                    `🎉 *Welcome to EliteMarts Bot!*\\n\\n` +
+                    `Bot is running successfully on Vercel with webhooks!\\n\\n` +
+                    `*Your Chat ID:* \`${chatId}\`\\n\\n` +
+                    `Use this Chat ID in your .env.local as TELEGRAM_ADMIN_CHAT_ID`,
+                    { parse_mode: 'Markdown' }
+                );
+            } else if (text.startsWith('/help')) {
+                await bot.sendMessage(
+                    chatId,
+                    `📚 *Available Commands:*\\n\\n` +
+                    `/start - Welcome message\\n` +
+                    `/help - Show this help\\n` +
+                    `/verify SESSIONID - Verify a payment\\n` +
+                    `/reject SESSIONID - Reject a payment`,
+                    { parse_mode: 'Markdown' }
+                );
+            } else if (text.match(/\/verify[_ ](.+)/)) {
+                const match = text.match(/\/verify[_ ](.+)/);
+                const sessionId = match[1].trim();
+                await handleTelegramCommand(sessionId, 'verify', chatId);
+            } else if (text.match(/\/reject[_ ](.+)/)) {
+                const match = text.match(/\/reject[_ ](.+)/);
+                const sessionId = match[1].trim();
+                await handleTelegramCommand(sessionId, 'reject', chatId);
+            }
+
+            return NextResponse.json({ ok: true });
+        }
+
+        // If we get here, it's an unknown update type
+        console.warn('⚠️ Unknown update type:', Object.keys(body));
         return NextResponse.json({ ok: true });
+
     } catch (error) {
-        console.error('Webhook POST error:', error);
-        return NextResponse.json(
-            { error: 'Internal Server Error', details: error.message },
-            { status: 500 }
-        );
+        console.error('❌ Fatal webhook error:', error);
+        // Still return 200 to Telegram to prevent retries
+        return NextResponse.json({ ok: true });
     }
 }
 
