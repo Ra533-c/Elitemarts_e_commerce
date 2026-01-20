@@ -1,17 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Sparkles, ArrowDown } from 'lucide-react';
 
 export default function HeroSection() {
+    const router = useRouter();
     const [currentVideo, setCurrentVideo] = useState(0);
 
-    const scrollToOrder = () => {
-        const orderForm = document.getElementById('order-form');
-        if (orderForm) {
-            orderForm.scrollIntoView({ behavior: 'smooth' });
-        }
+    const handleOrderNow = () => {
+        router.push('/order');
     };
 
     const videos = [
@@ -145,27 +144,25 @@ export default function HeroSection() {
                     </motion.div>
                 </motion.div>
 
-                {/* CTA Buttons */}
+                {/* CTA Button - Simple & Clean */}
                 <div className="flex flex-col items-center gap-4 px-4">
                     <motion.button
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="w-full sm:w-auto bg-white text-indigo-700 px-6 sm:px-10 py-4 sm:py-5 rounded-full text-lg sm:text-xl font-bold shadow-2xl hover:shadow-3xl transition-all cursor-pointer group"
-                        onClick={scrollToOrder}
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={handleOrderNow}
+                        className="bg-white text-indigo-700 px-8 sm:px-12 py-4 sm:py-5 rounded-full text-lg sm:text-xl font-bold shadow-xl hover:shadow-2xl transition-all cursor-pointer"
                     >
-                        <span className="flex items-center justify-center gap-2">
-                            🚀 Order Now - ₹1,199 Only
-                            <span className="line-through text-gray-500 text-sm sm:text-base">₹2,999</span>
-                        </span>
+                        🚀 Order Now – ₹1,199 Only
+                        <span className="ml-2 line-through text-gray-400 text-sm sm:text-base font-normal">₹3,999</span>
                     </motion.button>
 
                     <motion.div
-                        animate={{ y: [0, 10, 0] }}
+                        animate={{ y: [0, 8, 0] }}
                         transition={{ repeat: Infinity, duration: 1.5 }}
-                        className="text-white/80 flex items-center gap-2 text-sm sm:text-base"
+                        className="text-white/70 flex items-center gap-2 text-sm"
                     >
-                        <ArrowDown size={20} />
-                        <span>Scroll to order</span>
+                        <ArrowDown size={18} />
+                        <span>Limited Stock Available</span>
                     </motion.div>
                 </div>
 

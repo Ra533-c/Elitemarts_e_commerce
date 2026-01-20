@@ -1,10 +1,9 @@
 import HeroSection from "@/components/HeroSection";
 import ProductShowcase from "@/components/ProductShowcase";
-import OrderForm from "@/components/OrderForm";
 import OrderLookup from "@/components/OrderLookup";
 import InstagramButton from "@/components/InstagramButton";
 import CountdownTimer from "@/components/CountdownTimer";
-import { Zap, Instagram, Package, RefreshCw } from "lucide-react";
+import { Instagram, Package, RefreshCw } from "lucide-react";
 
 export default function Home() {
   return (
@@ -15,24 +14,6 @@ export default function Home() {
       <HeroSection />
 
       <ProductShowcase />
-
-      {/* Order Section */}
-      <section className="py-12 sm:py-20 px-4 bg-gradient-to-br from-gray-50 to-indigo-50">
-        <div className="text-center mb-12 sm:mb-16">
-          <h2 className="text-3xl sm:text-4xl md:text-6xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent mb-4 sm:mb-6 px-4">
-            Order Your Relief Today
-          </h2>
-          <p className="text-gray-600 text-base sm:text-xl max-w-2xl mx-auto px-4">
-            Limited stock available. Secure your unit with a small booking fee of just ₹600.
-          </p>
-          <div className="flex items-center justify-center gap-2 mt-4 text-orange-600">
-            <Zap size={20} fill="currentColor" />
-            <span className="font-bold text-sm sm:text-base">Only 12 units left in stock!</span>
-          </div>
-        </div>
-
-        <OrderForm />
-      </section>
 
       {/* Order Lookup Section */}
       <section className="py-12 sm:py-20 px-4 bg-white">
@@ -110,3 +91,4 @@ export default function Home() {
     </main>
   );
 }
+

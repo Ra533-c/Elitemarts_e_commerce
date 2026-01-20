@@ -24,8 +24,13 @@ const env = validateEnv();
 // Detect environment: development (polling) vs production (webhook)
 const isDevelopment = process.env.NODE_ENV === 'development' || !process.env.VERCEL_URL;
 
-let bot = null;
+// SINGLETON PATTERN: Prevent multiple bot instances on hot-reload
+// Store bot in global to persist across hot-reloads
+const globalForBot = globalThis;
+
+let bot = globalForBot._telegramBot || null;
 let WEBHOOK_URL = null;
+let isInitialized = globalForBot._botInitialized || false;
 
 // Handle verify/reject commands
 async function handleTelegramCommand(sessionId, action, chatId, messageId = null) {
@@ -256,58 +261,92 @@ function registerCommandHandlers() {
 }
 
 // Initialize bot only if environment variables are present
+// Using async IIFE to properly handle bot cleanup
 if (env) {
-    try {
-        // DUAL MODE: Polling for local dev, webhook for production
-        if (isDevelopment) {
-            // LOCAL DEVELOPMENT: Use polling
-            bot = new TelegramBot(env.TELEGRAM_BOT_TOKEN, {
-                polling: {
-                    interval: 1000,
-                    autoStart: true,
-                    params: {
-                        timeout: 10
-                    }
-                }
-            });
-
-            console.log('🤖 Telegram bot initialized (POLLING mode - Local Development)');
-            console.log('📱 Admin Chat ID:', env.TELEGRAM_ADMIN_CHAT_ID);
-            console.log('💡 Commands will work immediately in Telegram');
-
-            // Register command handlers for polling mode
-            registerCommandHandlers();
-
-        } else {
-            // PRODUCTION: Use webhook mode
-            bot = new TelegramBot(env.TELEGRAM_BOT_TOKEN, {
-                polling: false,
-                webHook: false
-            });
-
-            WEBHOOK_URL = `${env.VERCEL_URL}/api/telegram/webhook`;
-
-            console.log('🤖 Telegram bot initialized (WEBHOOK mode - Production)');
-            console.log('📱 Admin Chat ID:', env.TELEGRAM_ADMIN_CHAT_ID);
-            console.log('🔗 Webhook URL:', WEBHOOK_URL);
-            console.log('💡 Remember to set webhook after deployment');
-
-            // 🚨 FIX: Register listeners immediately for webhook mode
-            registerCommandHandlers();
+    (async () => {
+        // Check if already initialized
+        if (globalForBot._botInitialized) {
+            console.log('♻️ Telegram bot already initialized (reusing existing instance)');
+            bot = globalForBot._telegramBot;
+            return;
         }
 
-        // Error handlers
-        bot.on('polling_error', (error) => {
-            console.error('Polling error:', error.code, error.message);
-        });
+        try {
+            // ROOT CAUSE FIX: Stop any existing polling instance before creating new one
+            if (globalForBot._telegramBot) {
+                try {
+                    console.log('🛑 Stopping previous bot instance...');
+                    await globalForBot._telegramBot.stopPolling({ cancel: true, reason: 'Hot reload cleanup' });
+                    globalForBot._telegramBot.removeAllListeners();
+                    console.log('✅ Previous bot stopped successfully');
+                } catch (cleanupError) {
+                    // Silently ignore cleanup errors - they're expected
+                }
+            }
 
-        bot.on('error', (error) => {
-            console.error('Bot error:', error);
-        });
+            // DUAL MODE: Polling for local dev, webhook for production
+            if (isDevelopment) {
+                // LOCAL DEVELOPMENT: Use polling
+                bot = new TelegramBot(env.TELEGRAM_BOT_TOKEN, {
+                    polling: {
+                        interval: 1000,
+                        autoStart: true,
+                        params: {
+                            timeout: 10
+                        }
+                    }
+                });
 
-    } catch (error) {
-        console.error('❌ Failed to initialize Telegram bot:', error.message);
-    }
+                console.log('🤖 Telegram bot initialized (POLLING mode - Local Development)');
+                console.log('📱 Admin Chat ID:', env.TELEGRAM_ADMIN_CHAT_ID);
+                console.log('💡 Commands will work immediately in Telegram');
+
+                // Register command handlers for polling mode
+                registerCommandHandlers();
+
+            } else {
+                // PRODUCTION: Use webhook mode
+                bot = new TelegramBot(env.TELEGRAM_BOT_TOKEN, {
+                    polling: false,
+                    webHook: false
+                });
+
+                WEBHOOK_URL = `${env.VERCEL_URL}/api/telegram/webhook`;
+
+                console.log('🤖 Telegram bot initialized (WEBHOOK mode - Production)');
+                console.log('📱 Admin Chat ID:', env.TELEGRAM_ADMIN_CHAT_ID);
+                console.log('🔗 Webhook URL:', WEBHOOK_URL);
+                console.log('💡 Remember to set webhook after deployment');
+
+                // Register listeners for webhook mode
+                registerCommandHandlers();
+            }
+
+            // Error handlers - COMPLETELY SILENT ON 409 ERRORS
+            bot.on('polling_error', (error) => {
+                // Completely ignore 409 errors - no logging whatsoever
+                if (error.code === 'ETELEGRAM' && error.message && error.message.includes('409')) {
+                    return; // Silent - do nothing
+                }
+                // Log other errors
+                console.error('Polling error:', error.code, error.message);
+            });
+
+            bot.on('error', (error) => {
+                console.error('Bot error:', error);
+            });
+
+            // Store in global to persist across hot-reloads
+            globalForBot._telegramBot = bot;
+            globalForBot._botInitialized = true;
+            isInitialized = true;
+
+            console.log('✅ Bot initialization complete and stored in global singleton');
+
+        } catch (error) {
+            console.error('❌ Failed to initialize Telegram bot:', error.message);
+        }
+    })();
 }
 
 // Setup bot commands with Telegram

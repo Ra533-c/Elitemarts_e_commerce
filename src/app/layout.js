@@ -1,5 +1,6 @@
 import { Toaster } from "react-hot-toast";
 import "./globals.css";
+import SmoothScrollProvider from "@/components/SmoothScrollProvider";
 
 export const metadata = {
   title: "EliteMarts - Robotic Neck & Shoulder Massager",
@@ -10,7 +11,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className="antialiased">
-        {children}
+        <SmoothScrollProvider>
+          {children}
+        </SmoothScrollProvider>
         <Toaster position="bottom-center" />
       </body>
     </html>
