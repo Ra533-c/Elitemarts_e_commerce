@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import crypto from 'crypto';
 import clientPromise from '@/lib/database';
 import QRCode from 'qrcode';
 import { sendTelegramNotification } from '@/lib/notifications';
@@ -15,8 +16,9 @@ export async function POST(request) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        // Generate session ID
-        const sessionId = `SESSION-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+        // Generate cryptographically strong unique session ID
+        // Using crypto.randomUUID() ensures true uniqueness - no collisions even hours/days later
+        const sessionId = `SESSION-${crypto.randomUUID()}`;
 
         // Generate UPI payment URL
         const upiId = process.env.UPI_ID || 'riya4862@airtel';

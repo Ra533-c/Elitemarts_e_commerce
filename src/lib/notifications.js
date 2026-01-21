@@ -58,16 +58,17 @@ _Click the buttons below to take action:_
 
     try {
         // Inline keyboard with clickable buttons
+        // Using colon separator for callback_data (Telegram best practice)
         const keyboard = {
             inline_keyboard: [
                 [
                     {
                         text: '✅ Verify Payment',
-                        callback_data: `verify_${sessionId}`
+                        callback_data: `verify:${sessionId}`
                     },
                     {
                         text: '❌ Reject Payment',
-                        callback_data: `reject_${sessionId}`
+                        callback_data: `reject:${sessionId}`
                     }
                 ]
             ]

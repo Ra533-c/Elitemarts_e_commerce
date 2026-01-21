@@ -195,13 +195,13 @@ function registerCommandHandlers() {
         }
     });
 
-    // Verify command - supports both /verify_SESSIONID and /verify SESSIONID
+    // Verify command - supports both /verify:SESSIONID and /verify SESSIONID
     bot.onText(/\/verify[_ ](.+)/, async (msg, match) => {
         const sessionId = match[1].trim();
         await handleTelegramCommand(sessionId, 'verify', msg.chat.id);
     });
 
-    // Reject command - supports both /reject_SESSIONID and /reject SESSIONID
+    // Reject command - supports both /reject:SESSIONID and /reject SESSIONID
     bot.onText(/\/reject[_ ](.+)/, async (msg, match) => {
         const sessionId = match[1].trim();
         await handleTelegramCommand(sessionId, 'reject', msg.chat.id);
@@ -227,8 +227,8 @@ function registerCommandHandlers() {
                 text: 'Processing...'
             });
 
-            // Parse callback data: verify_SESSIONID or reject_SESSIONID
-            const [action, sessionId] = data.split('_', 2);
+            // Parse callback data: verify:SESSIONID or reject:SESSIONID
+            const [action, sessionId] = data.split(':', 2);
 
             if (action === 'verify' || action === 'reject') {
                 console.log(`🎯 Processing ${action} for session: ${sessionId}`);
@@ -311,7 +311,11 @@ if (env) {
                     webHook: false
                 });
 
-                WEBHOOK_URL = `${env.VERCEL_URL}/api/telegram/webhook`;
+                // Construct webhook URL with proper protocol
+                const baseUrl = env.VERCEL_URL.startsWith('http')
+                    ? env.VERCEL_URL
+                    : `https://${env.VERCEL_URL}`;
+                WEBHOOK_URL = `${baseUrl}/api/telegram/webhook`;
 
                 console.log('🤖 Telegram bot initialized (WEBHOOK mode - Production)');
                 console.log('📱 Admin Chat ID:', env.TELEGRAM_ADMIN_CHAT_ID);

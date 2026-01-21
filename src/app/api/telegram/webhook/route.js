@@ -49,8 +49,8 @@ export async function POST(request) {
                 text: '⚡ Processing...'
             });
 
-            // 2. Parse action and sessionId
-            const [action, sessionId] = data.split('_', 2);
+            // 2. Parse action and sessionId (format: action:sessionId)
+            const [action, sessionId] = data.split(':', 2);
 
             if (!action || !sessionId) {
                 console.error('❌ Invalid callback data:', data);
