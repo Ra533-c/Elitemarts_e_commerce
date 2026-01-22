@@ -8,9 +8,9 @@ import confetti from 'canvas-confetti';
 export default function PricingCard({ onPriceChange }) {
     const [couponApplied, setCouponApplied] = useState(true);
 
-    const originalPrice = 2999;
+    const originalPrice = 3999;
     const discountedPrice = 1199;
-    const prepaidAmount = 600;
+    const prepaidAmount = 100;
 
     const finalPrice = couponApplied ? discountedPrice : originalPrice;
     const balanceDue = finalPrice - prepaidAmount;
@@ -59,8 +59,8 @@ export default function PricingCard({ onPriceChange }) {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className={`p-4 sm:p-5 rounded-2xl border-2 cursor-pointer transition-all mb-6 sm:mb-8 ${couponApplied
-                        ? 'border-green-500 bg-green-50 shadow-lg shadow-green-100'
-                        : 'border-gray-300 bg-white hover:border-indigo-300'
+                    ? 'border-green-500 bg-green-50 shadow-lg shadow-green-100'
+                    : 'border-gray-300 bg-white hover:border-indigo-300'
                     }`}
                 onClick={handleCouponToggle}
             >

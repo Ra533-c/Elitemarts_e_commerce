@@ -30,7 +30,7 @@ export default function OrderForm() {
     const [pricing] = useState({
         finalPrice: 1199,
         couponApplied: true,
-        balanceDue: 599
+        balanceDue: 1099
     });
 
     const { register, handleSubmit, formState: { errors }, setValue, watch } = useForm({
@@ -294,13 +294,9 @@ export default function OrderForm() {
                             animate={{ scale: 1, y: 0 }}
                             className="bg-white rounded-3xl shadow-2xl p-8 max-w-md mx-4 text-center"
                         >
-                            <motion.div
-                                animate={{ rotate: 360 }}
-                                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                                className="mx-auto mb-6"
-                            >
-                                <Loader2 className="w-16 h-16 text-indigo-600" />
-                            </motion.div>
+                            <div className="mx-auto mb-6">
+                                <Loader2 className="w-16 h-16 text-indigo-600 animate-spin" />
+                            </div>
 
                             <h3 className="text-2xl font-bold text-gray-900 mb-3">
                                 Creating Payment Session...

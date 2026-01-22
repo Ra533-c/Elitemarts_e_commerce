@@ -40,7 +40,7 @@ export async function generateClientInvoice(orderData) {
         // Pricing
         const pricing = orderData.pricing || {};
         const finalPrice = pricing.finalPrice || 1199;
-        const prepaidAmount = 600;
+        const prepaidAmount = 100;
         const balanceDue = finalPrice - prepaidAmount;
         const discount = pricing.couponApplied ? 1800 : 0;
 
@@ -164,7 +164,7 @@ export async function generateClientInvoice(orderData) {
         doc.roundedRect(15, yPos - 4, 60, 8, 2, 2, 'F');
         doc.setTextColor('#fff');
         doc.setFontSize(8);
-        doc.text('Prepaid: Rs 600 PAID', 18, yPos);
+        doc.text('Prepaid: Rs 100 PAID', 18, yPos);
 
         yPos += 12;
         const balanceColor = orderData.deliveryStatus === 'delivered' ? GREEN : '#f59e0b';

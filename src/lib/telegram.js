@@ -98,16 +98,18 @@ async function handleTelegramCommand(sessionId, action, chatId, messageId = null
                 `✅ *Payment Verified!*\n\n` +
                 `Session: \`${sessionId}\`\n` +
                 `Customer: *${session.customerData.name}*\n` +
-                `Amount: *₹600*\n\n` +
+                `Amount: *₹100*\n\n` +
                 `Order will be created automatically when user's page refreshes.`;
 
             // If messageId is provided (from inline button), edit the original message
             if (messageId) {
+                console.log(`📝 Attempting to edit message ${messageId} in chat ${chatId}`);
                 await bot.editMessageText(confirmationMessage, {
                     chat_id: chatId,
                     message_id: messageId,
                     parse_mode: 'Markdown'
                 });
+                console.log(`✅ Message edited successfully`);
             } else {
                 // Otherwise send a new message (from text command)
                 await bot.sendMessage(chatId, confirmationMessage, { parse_mode: 'Markdown' });
@@ -133,17 +135,19 @@ async function handleTelegramCommand(sessionId, action, chatId, messageId = null
                 `❌ *Payment Rejected*\n\n` +
                 `Session: \`${sessionId}\`\n` +
                 `Customer: *${session.customerData.name}*\n` +
-                `Amount: *₹600*\n\n` +
+                `Amount: *₹100*\n\n` +
                 `Reason: Payment not received or incorrect amount.\n\n` +
                 `User will be redirected to retry payment.`;
 
             // If messageId is provided (from inline button), edit the original message
             if (messageId) {
+                console.log(`📝 Attempting to edit message ${messageId} in chat ${chatId}`);
                 await bot.editMessageText(rejectionMessage, {
                     chat_id: chatId,
                     message_id: messageId,
                     parse_mode: 'Markdown'
                 });
+                console.log(`✅ Message edited successfully`);
             } else {
                 // Otherwise send a new message (from text command)
                 await bot.sendMessage(chatId, rejectionMessage, { parse_mode: 'Markdown' });
@@ -230,6 +234,12 @@ function registerCommandHandlers() {
             // Parse callback data: verify:SESSIONID or reject:SESSIONID
             const [action, sessionId] = data.split(':', 2);
 
+            // DEBUG: Log parsed values
+            console.log(`🔍 DEBUG - Raw data: "${data}"`);
+            console.log(`🔍 DEBUG - Parsed action: "${action}"`);
+            console.log(`🔍 DEBUG - Parsed sessionId: "${sessionId}"`);
+            console.log(`🔍 DEBUG - Action check: action === 'verify'? ${action === 'verify'}, action === 'reject'? ${action === 'reject'}`);
+
             if (action === 'verify' || action === 'reject') {
                 console.log(`🎯 Processing ${action} for session: ${sessionId}`);
 
@@ -238,7 +248,7 @@ function registerCommandHandlers() {
 
                 console.log(`✅ ${action} completed successfully for session: ${sessionId}`);
             } else {
-                console.warn(`⚠️ Unknown action: ${action}`);
+                console.warn(`⚠️ Unknown action: ${data}`);
                 await bot.answerCallbackQuery(callbackQuery.id, {
                     text: 'Unknown action',
                     show_alert: true

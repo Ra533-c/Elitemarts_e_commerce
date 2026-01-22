@@ -172,7 +172,7 @@ export default function OrderTrackingPage() {
                                                 PAID ✓
                                             </span>
                                         </div>
-                                        <p className="text-3xl font-bold text-green-600">₹600</p>
+                                        <p className="text-3xl font-bold text-green-600">₹100</p>
                                         <p className="text-xs text-gray-500 mt-1">Payment Method: {orderData.paymentMethod || 'UPI/Online'}</p>
                                     </div>
 
@@ -184,7 +184,7 @@ export default function OrderTrackingPage() {
                                                 {orderData.deliveryStatus === 'delivered' ? 'PAID ✓' : 'PENDING'}
                                             </span>
                                         </div>
-                                        <p className="text-3xl font-bold text-orange-600">₹{orderData.pricing?.balanceDue || 599}</p>
+                                        <p className="text-3xl font-bold text-orange-600">₹{orderData.pricing?.balanceDue || 1099}</p>
                                         <p className="text-xs text-gray-500 mt-1">
                                             {orderData.deliveryStatus === 'delivered' ? 'Paid on delivery' : 'Pay on delivery'}
                                         </p>
@@ -232,8 +232,8 @@ export default function OrderTrackingPage() {
                                                 className="text-center"
                                             >
                                                 <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center mb-2 transition-all ${stage.isActive
-                                                        ? 'bg-purple-600 text-white scale-110'
-                                                        : 'bg-gray-200 text-gray-400'
+                                                    ? 'bg-purple-600 text-white scale-110'
+                                                    : 'bg-gray-200 text-gray-400'
                                                     }`}>
                                                     <Icon className="w-6 h-6" />
                                                 </div>

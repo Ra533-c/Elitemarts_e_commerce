@@ -25,7 +25,7 @@ export default function PaymentWaitingPage() {
     const confettiTriggeredRef = useRef(false); // Prevent duplicate confetti
 
     const upiId = 'riya4862@airtel';
-    const amount = 600;
+    const amount = 100;
     const upiLink = `upi://pay?pa=${upiId}&pn=EliteMarts&am=${amount}&cu=INR`;
 
     // Load session on mount
@@ -301,14 +301,14 @@ export default function PaymentWaitingPage() {
                         {/* Header */}
                         <div className="text-center mb-6">
                             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-                                Complete Your Payment
+                                Place Your Order Now! 🎉
                             </h1>
                             <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl p-4 mb-3">
                                 <p className="text-sm font-semibold mb-1">Booking Amount</p>
                                 <p className="text-4xl md:text-5xl font-black">₹{amount}</p>
                             </div>
                             <p className="text-sm text-gray-600">
-                                ₹600 prepaid • ₹{session.pricing?.balanceDue || 599} Cash On Delivery
+                                ₹100 prepaid • ₹{session.pricing?.balanceDue || 1099} Cash On Delivery
                             </p>
                         </div>
 
@@ -415,7 +415,7 @@ export default function PaymentWaitingPage() {
                                     </div>
 
                                     <p className="text-gray-600 text-sm mb-6">
-                                        ₹{session?.pricing?.balanceDue || 599} will be collected on delivery
+                                        ₹{session?.pricing?.balanceDue || 1099} will be collected on delivery
                                     </p>
 
                                     <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">

@@ -17,7 +17,7 @@ export async function POST(request) {
 
         // Generate UPI payment URL
         const upiId = process.env.UPI_ID || 'riya4862@airtel';
-        const upiUrl = `upi://pay?pa=${upiId}&pn=EliteMarts&am=600&tn=Order_${orderId}&cu=INR`;
+        const upiUrl = `upi://pay?pa=${upiId}&pn=EliteMarts&am=100&tn=Order_${orderId}&cu=INR`;
 
         // Generate QR Code as base64
         const qrCodeImage = await QRCode.toDataURL(upiUrl, {
@@ -40,14 +40,14 @@ export async function POST(request) {
             pricing: {
                 originalPrice: 2999,
                 finalPrice: pricing?.finalPrice || 1199,
-                prepaidAmount: 600,
-                balanceDue: (pricing?.finalPrice || 1199) - 600,
+                prepaidAmount: 100,
+                balanceDue: (pricing?.finalPrice || 1199) - 100,
                 couponApplied: pricing?.couponApplied || true
             },
             qrCode: {
                 imageUrl: qrCodeImage,
                 upiId,
-                amount: 600,
+                amount: 100,
                 data: upiUrl,
                 expiresAt: new Date(Date.now() + 15 * 60 * 1000) // 15 minutes expiry
             },
@@ -67,7 +67,7 @@ export async function POST(request) {
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
         const returnUrl = `${appUrl}/success?order_id=${orderId}`;
 
-        const instamojoUrl = `${instamojoBaseUrl}?amount=600&purpose=BOOKING_FEE&order_id=${orderId}&buyer_name=${encodeURIComponent(customer.name)}&phone=${customer.phone}&redirect_url=${encodeURIComponent(returnUrl)}`;
+        const instamojoUrl = `${instamojoBaseUrl}?amount=100&purpose=BOOKING_FEE&order_id=${orderId}&buyer_name=${encodeURIComponent(customer.name)}&phone=${customer.phone}&redirect_url=${encodeURIComponent(returnUrl)}`;
 
         // Return response
         return NextResponse.json({

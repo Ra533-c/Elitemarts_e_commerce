@@ -22,7 +22,7 @@ export async function POST(request) {
 
         // Generate UPI payment URL
         const upiId = process.env.UPI_ID || 'riya4862@airtel';
-        const amount = 600;
+        const amount = 100;
         const upiUrl = `upi://pay?pa=${upiId}&pn=EliteMarts&am=${amount}&tn=Payment_${sessionId}&cu=INR`;
 
         // Parallel operations: Generate QR, Instamojo URL simultaneously
@@ -39,7 +39,7 @@ export async function POST(request) {
         const instamojoBaseUrl = process.env.INSTAMOJO_LINK || 'https://imjo.in/Hvu4ws';
         const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
         const returnUrl = `${appUrl}/success`;
-        const instamojoUrl = `${instamojoBaseUrl}?amount=600&purpose=BOOKING_FEE&order_id=${sessionId}&buyer_name=${encodeURIComponent(customer.name)}&phone=${customer.phone}&redirect_url=${encodeURIComponent(returnUrl)}`;
+        const instamojoUrl = `${instamojoBaseUrl}?amount=100&purpose=BOOKING_FEE&order_id=${sessionId}&buyer_name=${encodeURIComponent(customer.name)}&phone=${customer.phone}&redirect_url=${encodeURIComponent(returnUrl)}`;
 
         // Prepare session document
         const sessionDoc = {
@@ -57,8 +57,8 @@ export async function POST(request) {
             pricing: {
                 originalPrice: 2999,
                 finalPrice: pricing?.finalPrice || 1199,
-                prepaidAmount: 600,
-                balanceDue: (pricing?.finalPrice || 1199) - 600,
+                prepaidAmount: 100,
+                balanceDue: (pricing?.finalPrice || 1199) - 100,
                 couponApplied: pricing?.couponApplied || true
             },
             qrCode: {

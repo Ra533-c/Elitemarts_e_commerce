@@ -112,7 +112,7 @@ export default function CelebrationAnimation({ orderId, orderData, onClose }) {
                         </div>
                         <div className="flex justify-between">
                             <span className="text-gray-600">Balance on Delivery:</span>
-                            <span className="font-bold text-gray-900">₹{orderData?.pricing?.balanceDue || 599}</span>
+                            <span className="font-bold text-gray-900">₹{orderData?.pricing?.balanceDue || 1099}</span>
                         </div>
                     </div>
                 </motion.div>

@@ -298,11 +298,11 @@ export default function OrderLookup() {
                             <div className="space-y-3">
                                 <div className="flex justify-between">
                                     <span className="text-gray-700">Prepaid Amount (Paid):</span>
-                                    <span className="font-bold text-green-600">₹600.00 ✅</span>
+                                    <span className="font-bold text-green-600">₹100.00 ✅</span>
                                 </div>
                                 <div className="flex justify-between">
                                     <span className="text-gray-700">Balance (COD):</span>
-                                    <span className="font-bold text-orange-600">₹599.00</span>
+                                    <span className="font-bold text-orange-600">₹1099.00</span>
                                 </div>
                                 <div className="border-t border-green-300 pt-3">
                                     <div className="flex justify-between">
@@ -311,7 +311,7 @@ export default function OrderLookup() {
                                     </div>
                                 </div>
                                 <p className="text-xs text-green-700 mt-2">
-                                    💡 Pay ₹599 cash to delivery partner when your order arrives
+                                    💡 Pay ₹1099 cash to delivery partner when your order arrives
                                 </p>
                             </div>
                         </div>

@@ -17,7 +17,7 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
 
     const upiId = qrCodeData?.upiId || 'riya4862@airtel';
     const qrCodeImage = qrCodeData?.imageUrl;
-    const amount = 600;
+    const amount = 100;
     const upiLink = qrCodeData?.data || `upi://pay?pa=${upiId}&pn=EliteMarts&am=${amount}&cu=INR`;
 
     // Get Instamojo URL from sessionStorage
@@ -361,7 +361,7 @@ export default function PaymentGateway({ sessionId, qrCodeData, customerData, pr
                     <p className="text-4xl md:text-5xl font-black">₹{amount}</p>
                 </div>
                 <p className="text-sm text-gray-600">
-                    ₹600 prepaid to order • ₹{pricing?.balanceDue || 599} Cash On Delivery
+                    ₹100 prepaid to order • ₹{pricing?.balanceDue || 1099} Cash On Delivery
                 </p>
 
                 {/* Timer Display */}

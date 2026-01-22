@@ -49,7 +49,7 @@ export default function Home() {
                   <Package size={16} className="shrink-0 mt-1 text-indigo-400" />
                   <div>
                     <p className="font-semibold text-white text-xs">Shipping:</p>
-                    <p className="text-xs">₹600 prepaid required. Rest on delivery.</p>
+                    <p className="text-xs">₹100 prepaid required. Rest on delivery.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
